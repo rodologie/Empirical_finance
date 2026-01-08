@@ -1,0 +1,252 @@
+---
+title: "Empirical Finance: Tutorial - Week 1"
+author: "Tomás Cordeiro da Silva"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    self_contained: true
+---
+
+# Setup 
+
+## Working Directory
+```{r, warning=FALSE, message=FALSE}
+# --- confirm working directory
+getwd()
+
+# --- list existing files
+list.files()
+```
+
+## Housekeeping
+```{r, warning=FALSE, message=FALSE}
+# --- removes all objects from the the current environment
+rm(list = ls())
+
+# --- removes a specific object 
+# rm(my_object)
+
+# --- removes a specific object stored as a string
+# rm(list = "my_object")
+```
+
+# Functions
+For most tasks R has a function for it. When it does not, most likely someone else already created one and made it publicly available via a package. Still, you can come across a situation where you will need to build your own. Refer to the "R Primer" document to learn how to create your own.
+
+# Reading Data
+
+## API
+An API is a tool that allows you to easily and automatically access data without having to download it. Particularly useful when dealing with large datasets or ones that update regularly.
+
+An example of an API is the `wbstats` package, which provides direct access to World Bank Indicators.
+```{r, warning=FALSE, message=FALSE}
+library(wbstats)
+
+gdp_data <- wb_data(
+  country = "GBR",
+  indicator = "NY.GDP.PCAP.CD"
+  )
+
+# --- we won't be needing this data today, so we can just remove it 
+rm("gdp_data")
+```
+
+## `read.csv` 
+On the "R Primer" document, I used `read.table`, instead of `read.csv`. `read.table` also reads csv files, as long as you specify that the separator as a comma (,). `read.csv` takes the comma as the default separator.
+
+Let's now load the data we will work with in this session.
+```{r, warning=FALSE, message=FALSE}
+# --- loading the data 
+data <- read.csv("Data/eaef21.csv")
+
+# --- how does the data look like?
+head(data)
+```
+
+Some initial data assessment.
+```{r, warning=FALSE, message=FALSE}
+# --- what are the dimensions of our dataset?
+dim(data)
+# -- number of rows
+nrow(data)
+# -- number of columns
+ncol(data)
+
+# --- how much memory does this object occupy in R?
+object.size(data)
+```
+
+```{r, warning=FALSE, message=FALSE}
+# --- what are the variables in our dataset?
+colnames(data)
+```
+
+```{r}
+# --- what is the class of our variables (i.e. how is the object treated)?
+sapply(data, class)
+# -- EARNINGS will latter be our variable of interest
+class(data$EARNINGS)
+```
+
+```{r}
+# --- getting the pulse of the variables 
+summary(data)
+# -- again, let's us focus on EARNINGS
+summary(data$EARNINGS)
+```
+
+# R Packages 
+
+## How to install a package 
+```{r, warning=FALSE, message=FALSE}
+# --- command to install a package
+# install.packages("tidyverse")
+
+# --- once the package is installed 
+library(tidyverse)
+
+# --- listing the packages that come tidyverse
+tidyverse::tidyverse_packages()
+```
+
+## `dplyr` package 
+```{r, warning=FALSE, message=FALSE}
+# --- create new variables with mutate
+data <- data %>%
+  mutate(
+    EDUC_LEVEL= factor(
+      case_when(
+        EDUCDO == 1 ~ "low",
+        EDUCHSD == 1 | EDUCPROF == 1 ~ "medium",
+        TRUE ~ "high"
+      ),
+      levels = c("low", "medium", "high")
+    )
+  )
+
+# --- perform operations by cluster with group_by and summarise
+data %>%
+  group_by(MALE) %>%
+  summarise(mean(EARNINGS), mean(HOURS), mean(EXP))
+
+# --- perform multiple operations at the same time 
+data %>% 
+  mutate(AGE_40 = ifelse(AGE <= 40, "below 40 or 40", "above 40")) %>%
+  group_by(AGE_40, MALE) %>% 
+  summarise(mean(EARNINGS), mean(HOURS), mean(EXP))
+```
+
+## `ggplot` package
+```{r, warning=FALSE, message=FALSE}
+ggplot(data = data, aes(x = EXP, y = EARNINGS)) + 
+  geom_point()
+```
+
+We can spice up our plot with these add-ons.
+```{r, warning=FALSE, message=FALSE}
+ggplot(data = data, aes(x = EXP, y = EARNINGS)) +
+  # --- mapping the color of the points to the education level, generates  distinct colors (which will be chosen by R)
+  geom_point(aes(color = EDUC_LEVEL)) + 
+  # --- we can modify the colors and labels to our choosing
+  scale_color_manual(
+    values = c(
+      "low" = "#C44E52", 
+      "medium" = "steelblue",
+      "high" = "#4E9A06"
+      ),
+    name = "education level"
+  ) +
+  # --- we can write the labels of our axis and the title of our plot
+  labs(
+    x = "EXPERIENCE",
+    y = "EARNINGS",
+    title = "scatter plot") +
+  # --- to remove the grey background colour we just call this option
+  theme_minimal() + 
+  # --- for further details 
+  theme(
+    # -- options for axis text and title
+    axis.text.x  = element_text(color = "black"),
+    axis.text.y  = element_text(color = "black"),
+    axis.title.x = element_text(color = "black"),
+    axis.title.y = element_text(color = "black"),
+    # -- option to mark a line in both axis
+    axis.line = element_line(color = "black"),
+    # -- option to include ticks in both axis
+    axis.ticks.x = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black")
+  )
+```
+
+Another informative plot.
+```{r, warning=FALSE, message=FALSE}
+ggplot(data = data, aes(x = EARNINGS, fill = EDUC_LEVEL)) + 
+  geom_density(
+    # -- alpha controls the transparency of the area under the curve
+    alpha = 0.4,
+    color = "black"
+    ) + 
+  scale_fill_manual(
+    values = c(
+      "low" = "#C44E52", 
+      "medium" = "steelblue",
+      "high" = "#4E9A06"
+      ),
+    name = "education level"
+  ) +
+  scale_y_continuous(
+    expand = c(0,0)
+  ) +
+  labs(
+    x = "EARNINGS",
+    y = "DENSITY",
+    title = "density of EARNINGS by EDUCATION LEVEL"
+  ) +
+  theme_minimal() +
+  # --- for further details 
+  theme(
+    # -- options for axis text and title
+    axis.text.x  = element_text(color = "black"),
+    axis.text.y  = element_text(color = "black"),
+    axis.title.x = element_text(color = "black"),
+    axis.title.y = element_text(color = "black"),
+    # -- option to mark a line in both axis
+    axis.line = element_line(color = "black"),
+    # -- option to include ticks in both axis,
+    axis.ticks.x = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black"),
+    # -- remove vertical grid lines
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+  )
+```
+
+# Regressions 
+
+## Univariate Regression
+```{r}
+model_simple <- data %>%
+  lm(log(EARNINGS) ~ S, data =.)
+
+model_simple %>% summary()
+```
+
+## Multivariate Regression
+```{r}
+model_multi <- data %>%
+  lm(log(EARNINGS) ~ S + EXP + MALE, data = .)
+
+model_multi %>% summary()
+```
+
+```{r}
+model_educ_group <- data %>%
+  lm(log(EARNINGS) ~ EDUC_LEVEL + EXP + MALE, data = .)
+
+model_educ_group %>% summary()
+```

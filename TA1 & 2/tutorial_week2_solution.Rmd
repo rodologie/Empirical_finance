@@ -1,0 +1,1411 @@
+---
+title: "Empirical Finance: Tutorial - Week 2"
+author: "Tomás Cordeiro da Silva"
+date: "2024-01-15"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: false
+    self_contained: true
+---
+
+# Setup
+
+## Working Directory
+
+```{r, warning=FALSE, message=FALSE}
+# --- confirm working directory
+getwd()
+
+# --- list existing files
+list.files()
+```
+
+## Housekeeping
+
+```{r, warning=FALSE, message=FALSE}
+# --- removes all objects from the the current environment
+rm(list = ls())
+```
+
+## Packages
+
+```{r, warning=FALSE, message=FALSE}
+# --- defining the packages required
+packages <- c(
+  "quantmod",   # download time-series 
+  "tidyverse",  # data manipulation and visualization
+  "stargazer",  # publication-ready tables
+  "conflicted", # management of function name conflicts across packages
+  "moments",    # statistical moments, like skewness and kurtosis 
+  "lubridate",  # manipulation of data
+  "knitr",      # integrate R code with text (e.g. LaTeX, HTML, Markdown)
+  "sn",         # simulation of skewed distributions
+  "patchwork"   # composition of graphs
+)
+
+# --- from the ones needed extract the ones not installed
+to_install <- packages[!packages %in% installed.packages()[, "Package"]]
+
+# --- install the packages
+if (length(to_install) > 0) {
+  install.packages(to_install)
+}
+
+# --- load the packages in our session
+invisible(lapply(packages, library, character.only = TRUE))
+
+# --- defining `lag()` from the dplyr package as the preference
+conflict_prefer("lag", "dplyr")
+```
+
+# Data
+
+To download our data we will be using the `quantmod` package. This package connects us to our sources, using their public API's. The data extracted will be converted to an `xts` object.
+
+-   What is an `xts` object? I s a class of objects in R for time series, where indices are dates.
+
+A brief reference to `getSymbols` syntax:
+
+-   `Symbols`: requires the ticker (i.e. standardized identifier) of our variable
+-   `src`: requires de source (i.e. where to read the ticker/which API to connect)
+
+## S&P500 Index
+
+```{r}
+getSymbols(Symbols = "^GSPC", src = "yahoo")
+
+sp500 <- data.frame(
+  # -- extracts the index, which in xts objects is the date 
+  date  = index(GSPC),
+  # -- extracts "GSPC.Adjusted"; alternative: GSPC[, "GSPC.Adjusted"]
+  SP500 = as.numeric(Ad(GSPC))
+)
+```
+
+## GBPUSD Exchange Rate
+
+```{r}
+getSymbols(Symbols = "GBPUSD=X", src = "yahoo")
+
+gbpusd <- data.frame(
+  date  = index(`GBPUSD=X`),
+  GBPUSD = as.numeric(Ad(`GBPUSD=X`))
+)
+```
+
+## US Federal Fund Rate
+
+```{r}
+getSymbols(Symbols = "DFF", src = "FRED")
+
+usffr <- data.frame(
+  date  = index(DFF),
+  EFF = as.numeric(DFF)
+)
+```
+
+# Exercise 1
+
+Let's start of by computing daily simple and log return.
+
+The *one-period* **net simple return** between time $t$ and $t + 1$ is given by:
+
+$$
+R_{t+1} - 1 = \frac{P_{t+1}}{P_{t}} -1 \Leftrightarrow R_{t} - 1 = \frac{P_{t}}{P_{t-1}} -1
+$$
+
+The *one-period* **log return** between time $t$ and $t + 1$ is given by:
+
+$$
+r_{t+1} = ln(R_{t+1}) = ln\left(\frac{P_{t+1}}{P_{t}}\right) = ln(P_{t+1}) - ln(P_{t})
+$$
+
+```{r}
+# --- S&P500 Index
+sp500_d <- sp500 %>%
+  mutate(
+    dr = (SP500 / lag(SP500))-1,
+    lr = log(SP500) - log(lag(SP500))
+  )
+
+# --- GBPUSD Exchange Rate
+gbpusd_d <- gbpusd %>%
+  mutate(
+    dr = (GBPUSD / lag(GBPUSD))-1,
+    lr = log(GBPUSD) - log(lag(GBPUSD))
+  )
+
+# --- US Federal Fund Rate
+usffr_d <- usffr %>%
+  mutate(
+    dr = (EFF / lag(EFF))-1,
+    lr = log(EFF) - log(lag(EFF))
+  )
+```
+
+```{r}
+# --- alternative using `quantmod`
+sp500_xts <- getSymbols("^GSPC", src = "yahoo", auto.assign = FALSE)
+
+sp500_dr <- dailyReturn(Ad(sp500_xts), type = "arithmetic")
+sp500_lr <- dailyReturn(Ad(sp500_xts), type = "log")
+```
+
+```{r}
+# --- storing all these individual datasets in a single list 
+data_list <- list(
+  SP500 = sp500_d, 
+  GBPUSD = gbpusd_d,
+  EFF = usffr_d
+  )
+```
+
+It may be tempting to merge all series and compute simple and log returns in a single operation. However, this approach overlooks a critical data-integrity issue: not all time series are observed continuously over time.
+
+Both the S&P 500 Index and the GBP/USD exchange rate exhibit systematic breaks over weekends, whereas the US Federal Funds Rate is recorded for all calendar dates. Moreover, the Federal Funds Rate begins earlier in the sample, which would naturally lead to a `left_join` of the other two series onto it.
+
+This operation introduces missing values on non-trading days. As a consequence, return calculations become distorted: a Monday observation is no longer compared to the preceding Friday, but instead to an `NA`, breaking the economic interpretation of returns and compromising downstream analysis.
+
+```{r}
+lapply(data_list, function(df) {
+  any(diff(df$date) > 1)
+})
+```
+
+```{r}
+# --- building this joined dataset to visualize our argument
+# test <- usffr %>%
+#   left_join(sp500, by = "date") %>%
+#   left_join(gbpusd, by = "date") %>%
+#   arrange(date) %>%
+#   mutate(
+#     across(
+#       .cols = where(is.numeric) ,
+#       .fns  = list(
+#         sr = ~ .x / lag(.x) -1,
+#         lr = ~ log(.x) - log(lag(.x))
+#       ) ,
+#       .names = "{.fn}_{.col}"
+#     )
+#   )
+```
+
+## a)
+
+Plot simple returns.
+
+```{r, warning=FALSE, message=FALSE}
+for (data in data_list){
+  
+  vars <- c("dr", "lr")
+  
+  for (var in vars){
+
+    print(
+      ggplot(data = data, aes(x = date)) +
+        geom_line(aes(y = !!sym(var)), colour = "steelblue", linewidth = 0.8) +
+        labs(
+            x = "date",
+            y = "return",
+            title = ifelse(
+              var == "dr", 
+              paste0(names(data)[2],": ", "Daily Returns"), 
+              paste0(names(data)[2],": ", "Log Returns")
+              )
+            ) +
+        theme_minimal() +
+        # --- for further details
+        theme(
+          # -- options for axis text and title
+          axis.text.x  = element_text(color = "black", angle = 45),
+          axis.text.y  = element_text(color = "black"),
+          axis.title.x = element_text(color = "black"),
+          axis.title.y = element_text(color = "black"),
+          # -- option to mark a line in both axis
+          axis.line = element_line(color = "black"),
+          # -- option to include ticks in both axis
+          axis.ticks.x = element_line(color = "black"),
+          axis.ticks.y = element_line(color = "black")
+          )
+      )
+  }
+}
+```
+
+## b)
+
+Compute summary statistics like mean, median, standard deviation, skewness, kurtosis (including the robust ones) min, max, and first-order serial correlation, and report then in % per annum.
+
+```{r}
+tables_list <- lapply(data_list, function(data) {
+ 
+  data %>%
+    summarise(
+      across(
+        c(dr, lr),
+        list(
+          mean        = ~ (mean(.x, na.rm = TRUE)) * 360 * 100,   # or 252 for trading days only
+          median      = ~ (median(.x, na.rm = TRUE) * 360) * 100, # or 252 for trading days only
+          sd          = ~ sd(.x, na.rm = TRUE) * sqrt(360),
+          skewness    = ~ skewness(.x, na.rm = TRUE),
+          kurtosis    = ~ kurtosis(.x, na.rm = TRUE),
+          min         = ~ (min(.x, na.rm = TRUE)) *360 * 100,
+          max         = ~ (max(.x, na.rm = TRUE)) *360 * 100,
+          correlation = ~ cor(.x, lag(.x), use = "complete.obs")
+        ),
+        .names = "{.fn}_{.col}"
+      )
+    ) %>%
+    # --- the above operation will create a column for each statistic-return pair; with pivot-longer we separate this into two columns using the "_" separator
+    pivot_longer(
+      everything(),
+      names_to = c("statistic", "variable"),
+      names_sep = "_",
+      values_to = "value"
+    ) %>% 
+    # --- we now reconfigure the table again from the longer to the wider format
+    pivot_wider(
+      names_from = variable,
+      values_from = value
+    ) %>%
+    # --- remove row indices 
+    column_to_rownames("statistic") %>%
+    mutate(
+      across(where(is.numeric), ~ round(.x, 4))
+    )
+})
+
+
+for (i in seq_along(tables_list)){
+  
+  stargazer(
+    tables_list[[i]],
+    type = "text",
+    summary = FALSE,
+    rownames = TRUE,
+    title = paste("Summary Statistics for", names(tables_list)[i]),
+    digits = 4
+  )
+}
+```
+
+**Robust Measures of Skewness**
+
+Sample Skewness 
+
+$$
+\hat{s} = \frac{1}{T-1} \sum_{i=1}^{T} \frac{(x_t - \hat{\mu})^3}{\hat{\sigma}^3}
+$$
+
+
+Bowley's Coefficient of Skewness 
+
+$$
+sk_2 = \frac{Q_3 + Q_1 - 2Q_2}{Q_3 - Q_1}
+$$
+
+
+Groeneveld & Meeden's Coefficient of Skewness 
+
+$$
+sk_3 = \frac{\mu - Q_2}{E|x - Q_2|}
+$$
+
+
+Pearson's Coefficient of Skewness 
+
+$$
+sk_4 = \frac{\mu - Q_2}{\sigma}
+$$
+
+**Robust Measures of Kurtosis**
+
+Sample Kurtosis 
+
+$$
+\hat{k} = \frac{1}{T-1} \sum_{i=1}^{T} \frac{(x_t - \hat{\mu})^4}{\hat{\sigma}^4}
+$$
+
+
+Moor's Coefficient of Kurtosis 
+
+$$
+ku_2 = \frac{(E_7 - E_5) + (E_3 - E_1)}{E_6 - E_2} - 1.23 
+$$
+
+Hogg's Coefficient of Kurtosis 
+
+$$
+ku_3 = \frac{U_{0.05} - L_{0.05}}{U_{0.5}- L_{0.5}} - 2.59
+$$
+
+Crom & Siddiqui's Coefficient of Kurtosis 
+
+$$
+ku_4 = \frac{F^{-1}(0.975)+F^{-1}(0.025)}{F^{-1}(0.75)-F^{-1}(0.25)} - 2.91
+$$
+
+```{r}
+robust_sk_ku <- function(x){
+  
+  # --- omitting NAs
+  x <- na.omit(x)
+  
+  # --- mean and centered moments
+  mu <- mean(x)
+  # -- 2nd centered moment: variance
+  m2   <- mean((x - mu)^2)
+  # -- 3rd centered moment: non-standardized skewness (i.e. sample skewness numerator)
+  m3   <- mean((x - mu)^3)
+  # -- 4th centered moment: non-standardized kurtosis(i.e. sample kurtosis numerator)
+  m4   <- mean((x - mu)^4)
+  
+  # --- quartiles
+  Q1 <- quantile(x, 0.25)
+  Q2 <- quantile(x, 0.50)
+  Q3 <- quantile(x, 0.75)
+
+  # --- octiles
+  E1 <- quantile(x, 1/8)
+  E2 <- quantile(x, 2/8)
+  E3 <- quantile(x, 3/8)
+  E5 <- quantile(x, 5/8)
+  E6 <- quantile(x, 6/8)
+  E7 <- quantile(x, 7/8)
+  
+  # --- tail quantiles
+  E975 <- quantile(x, 0.975)
+  E025 <- quantile(x, 0.025)
+  E750 <- quantile(x, 0.750)
+  E250 <- quantile(x, 0.250)
+  
+  # --- tail means
+  U05 <- mean(x[x >= quantile(x, 0.95)])
+  L05 <- mean(x[x <= quantile(x, 0.05)])
+  U50 <- mean(x[x >  Q2])
+  L50 <- mean(x[x <= Q2])
+  
+  # --- skewness measures
+  s   <- m3 / (m2^(3/2))
+  sk2 <- (Q3 + Q1 - 2*Q2) / (Q3 - Q1)              # Bowley
+  sk3 <- (mu - Q2) / mean(abs(x - Q2))             # Groeneveld–Meeden
+  sk4 <- (mu - Q2) / sd(x)                         # Pearson
+  
+  # --- kurtosis measures
+  k   <- m4 / (m2^2)
+  ku2 <- ((E7 - E5 + E3 - E1) / (E6 - E2)) - 1.23  # Moors
+  ku3 <- ((U05 - L05) / (U50 - L50)) - 2.59        # Hogg
+  ku4 <- ((E975 - E025) / (E750 - E250)) - 2.91    # Crow–Siddiqui
+  
+  data.frame(
+    statistic = c(
+        "Sample skewness",
+        "Bowley skewness",
+        "Groeneveld–Meeden skewness",
+        "Pearson skewness",
+        "Sample kurtosis",
+        "Moors kurtosis",
+        "Hogg kurtosis",
+        "Crow–Siddiqui kurtosis"
+      ),
+      value = c(
+        s,
+        sk2,
+        sk3,
+        sk4,
+        k,
+        ku2,
+        ku3,
+        ku4
+      ),
+      check.names = FALSE
+    )
+}
+```
+
+```{r}
+tables_list2 <- lapply(data_list, function(data) {
+
+  bind_rows(
+    dr = robust_sk_ku(data$dr),
+    lr = robust_sk_ku(data$lr),
+    .id = "variable"
+  ) %>%
+    pivot_wider(
+      names_from  = variable,
+      values_from = value
+    ) %>%
+    column_to_rownames("statistic") %>%
+    mutate(
+      across(where(is.numeric), ~ round(.x, 4))
+    )
+})
+
+
+
+for (i in seq_along(tables_list2)){
+  
+  stargazer(
+    tables_list2[[i]],
+    type = "text",
+    summary = FALSE,
+    rownames = TRUE,
+    title = paste("Robust Measures of Skewness and Kurtosis for", names(data_list)[i]),
+    digits = 4
+  )
+}
+
+```
+
+## c)
+
+Plot the histogram of each return series.
+
+```{r, warning=FALSE, message=FALSE}
+for (data in data_list){
+  
+  vars <- c("dr", "lr")
+  
+  for (var in vars){
+
+    print(
+      ggplot(data = data, aes(x = !!sym(var))) +
+        geom_histogram(
+          bins = 50,
+          color = "black",
+          fill = "steelblue"
+        ) +
+        scale_y_continuous(
+          expand = c(0,0)
+        ) +
+        labs(
+            x = NULL,
+            y = NULL,
+            title = ifelse(
+              var == "dr", 
+              paste0("Histogram of ",names(data)[2],": ", "Daily Returns"), 
+              paste0("Histogram of ",names(data)[2],": ", "Log Returns")
+              )
+            ) +
+        theme_minimal() +
+        # --- for further details
+        theme(
+          # -- options for axis text and title
+          axis.text.x  = element_text(color = "black"),
+          axis.text.y  = element_text(color = "black"),
+          axis.title.x = element_text(color = "black"),
+          axis.title.y = element_text(color = "black"),
+          # -- option to mark a line in both axis
+          axis.line = element_line(color = "black"),
+          # -- option to include ticks in both axis
+          axis.ticks.x = element_line(color = "black"),
+          axis.ticks.y = element_line(color = "black"),
+          # -- remove vertical grid lines
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank()
+          )
+      )
+  }
+}
+```
+
+## d)
+
+Compute the variance-covariance matrix.
+
+```{r}
+data_join_dr <- usffr_d %>%
+  inner_join(sp500_d, by = "date", suffix = c("","_SP500")) %>%
+  inner_join(gbpusd_d, by = "date", suffix = c("","_GBPUSD")) %>%
+  arrange(date) %>%
+  select(contains("dr")) %>%
+  rename(
+    EFF    = dr,
+    SP500  = dr_SP500, 
+    GBPUSD = dr_GBPUSD
+  )
+
+data_join_lr <- usffr_d %>%
+  inner_join(sp500_d, by = "date", suffix = c("","_SP500")) %>%
+  inner_join(gbpusd_d, by = "date", suffix = c("","_GBPUSD")) %>%
+  arrange(date) %>%
+  select(contains("lr")) %>%
+  rename(
+    EFF    = lr,
+    SP500  = lr_SP500, 
+    GBPUSD = lr_GBPUSD
+  )
+
+sigma_dr <- cov(data_join_dr, use = "complete.obs")
+
+sigma_lr <- cov(data_join_lr, use = "complete.obs")
+
+stargazer(
+  sigma_dr,
+  type = "text",
+  summary = FALSE,
+  rownames = TRUE,
+  digits = 4,
+  title = "Variance–Covariance Matrix: Daily Returns"
+)
+
+stargazer(
+  sigma_lr,
+  type = "text",
+  summary = FALSE,
+  rownames = TRUE,
+  digits = 4,
+  title = "Variance–Covariance Matrix: Log Returns"
+)
+```
+
+# Exercise 2
+
+```{r}
+# --- S&P500 Index
+sp500_m <- sp500 %>%
+  # -- safeguard to make sure our dates are in order
+  arrange(date) %>% 
+  mutate(
+    # -- define the calendar end of month (EOM) to facilitate the grouping of the data
+    month_end = ceiling_date(date, "month") - days(1)
+  ) %>%
+  group_by(month_end) %>%
+  summarise(
+    # -- last observed working day
+    last_trading_day = max(date),
+    SP500_EOM = SP500[which.max(date)],
+    .groups = "drop"
+  ) %>%
+  arrange(month_end) %>%
+  mutate(
+    # -- simple return
+    sr = (SP500_EOM / lag(SP500_EOM)) - 1,
+    # -- log return
+    lr = log(SP500_EOM) - log(lag(SP500_EOM))
+  )
+
+# --- GBPUSD Exchange Rate
+gbpusd_m <- gbpusd %>%
+  arrange(date) %>% 
+  mutate(
+    month_end = ceiling_date(date, "month") - days(1)
+  ) %>%
+  group_by(month_end) %>%
+  summarise(
+    last_trading_day = max(date),
+    GBPUSD_EOM = GBPUSD[which.max(date)],
+    .groups = "drop"
+  ) %>%
+  arrange(month_end) %>%
+  mutate(
+    sr = (GBPUSD_EOM / lag(GBPUSD_EOM)) - 1,
+    lr = log(GBPUSD_EOM) - log(lag(GBPUSD_EOM))
+  )
+
+# --- US Federal Fund Rate
+usffr_m <- usffr %>%
+  arrange(date) %>% 
+  mutate(
+    month_end = ceiling_date(date, "month") - days(1)
+  ) %>%
+  group_by(month_end) %>%
+  summarise(
+    last_trading_day = max(date),
+    EFF_EOM = EFF[which.max(date)],
+    .groups = "drop"
+  ) %>%
+  arrange(month_end) %>%
+  mutate(
+    sr = (EFF_EOM / lag(EFF_EOM)) - 1,
+    lr = log(EFF_EOM) - log(lag(EFF_EOM))
+  )
+```
+
+```{r}
+# --- storing all these individual datasets in a single list 
+data_list_m <- list(
+  SP500 = sp500_m, 
+  GBPUSD = gbpusd_m,
+  EFF = usffr_m
+  )
+```
+
+## a)
+
+Plot simple returns.
+
+```{r, warning=FALSE, message=FALSE}
+for (data in data_list_m){
+  
+  vars <- c("sr", "lr")
+  
+  for (var in vars){
+
+    print(
+      ggplot(data = data, aes(x = month_end)) +
+        geom_line(aes(y = !!sym(var)), colour = "steelblue", linewidth = 0.8) +
+        labs(
+            x = "date",
+            y = "return",
+            title = ifelse(
+              var == "sr", 
+              paste0(sub("_.*$","",names(data)[3]),": ", "EOM Simple Returns"), 
+              paste0(sub("_.*$","",names(data)[3]),": ", "EOM Log Returns")
+              )
+            ) +
+        theme_minimal() +
+        # --- for further details
+        theme(
+          # -- options for axis text and title
+          axis.text.x  = element_text(color = "black", angle = 45),
+          axis.text.y  = element_text(color = "black"),
+          axis.title.x = element_text(color = "black"),
+          axis.title.y = element_text(color = "black"),
+          # -- option to mark a line in both axis
+          axis.line = element_line(color = "black"),
+          # -- option to include ticks in both axis
+          axis.ticks.x = element_line(color = "black"),
+          axis.ticks.y = element_line(color = "black")
+          )
+      )
+  }
+}
+```
+
+## b)
+
+Compute summary statistics like mean, median, standard deviation, skewness, kurtosis (including the robust ones) min, max, and first-order serial correlation, and report then in % per annum.
+
+```{r}
+tables_list_m <- lapply(data_list_m, function(data) {
+
+  data %>%
+    summarise(
+      across(
+        c(sr, lr),
+        list(
+          mean        = ~ mean(.x, na.rm = TRUE) * 12 * 100,
+          median      = ~ median(.x, na.rm = TRUE) * 12 * 100,
+          sd          = ~ sd(.x, na.rm = TRUE) * sqrt(12),
+          skewness    = ~ skewness(.x, na.rm = TRUE),
+          kurtosis    = ~ kurtosis(.x, na.rm = TRUE),
+          min         = ~ (min(.x, na.rm = TRUE)) * 12 * 100,
+          max         = ~ (max(.x, na.rm = TRUE)) * 12 * 100,
+          correlation = ~ cor(.x, lag(.x), use = "complete.obs")
+        ),
+        .names = "{.fn}_{.col}"
+      )
+    ) %>%
+    # --- the above operation will create a column for each statistic-return pair; with pivot-longer we separate this into two columns using the "_" separator
+    pivot_longer(
+      everything(),
+      names_to = c("statistic", "variable"),
+      names_sep = "_",
+      values_to = "value"
+    ) %>% 
+    # --- we now reconfigure the table again from the longer to the wider format
+    pivot_wider(
+      names_from = variable,
+      values_from = value
+    ) %>%
+    # --- remove row indices 
+    column_to_rownames("statistic") %>%
+    mutate(
+      across(where(is.numeric), ~ round(.x, 4))
+    )
+})
+
+lapply(seq_along(tables_list_m), function(i) {
+  kable(
+    tables_list_m[[i]],
+    caption = paste("Summary Statistics for", names(tables_list_m)[i]),
+    digits = 4
+  )
+})
+```
+
+**Robust Measures of Skewness & Kurtosis**
+
+```{r}
+tables_list2_m <- lapply(data_list_m, function(data) {
+
+  bind_rows(
+    dr = robust_sk_ku(data$sr),
+    lr = robust_sk_ku(data$lr),
+    .id = "variable"
+  ) %>%
+    pivot_wider(
+      names_from  = variable,
+      values_from = value
+    ) %>%
+    column_to_rownames("statistic") %>%
+    mutate(
+      across(where(is.numeric), ~ round(.x, 4))
+    )
+})
+
+lapply(seq_along(tables_list2_m), function(i) {
+  kable(
+    tables_list2_m[[i]],
+    caption = paste("Robust Measures of Skewness and Kurtosis for", names(tables_list_m)[i]),
+    digits = 4
+  )
+})
+```
+
+## c)
+
+Plot the histogram of each return series.
+
+```{r, warning=FALSE, message=FALSE}
+for (data in data_list_m){
+  
+  vars <- c("sr", "lr")
+  
+  for (var in vars){
+
+    print(
+      ggplot(data = data, aes(x = !!sym(var))) +
+        geom_histogram(
+          bins = 50,
+          color = "black",
+          fill = "steelblue"
+        ) +
+        scale_y_continuous(
+          expand = c(0,0)
+        ) +
+        labs(
+            x = NULL,
+            y = NULL,
+            title = ifelse(
+              var == "sr", 
+              paste0(sub("_.*$","",names(data)[3]),": ", "EOM Simple Returns"), 
+              paste0(sub("_.*$","",names(data)[3]),": ", "EOM Log Returns")
+              )
+            ) +
+        theme_minimal() +
+        # --- for further details
+        theme(
+          # -- options for axis text and title
+          axis.text.x  = element_text(color = "black"),
+          axis.text.y  = element_text(color = "black"),
+          axis.title.x = element_text(color = "black"),
+          axis.title.y = element_text(color = "black"),
+          # -- option to mark a line in both axis
+          axis.line = element_line(color = "black"),
+          # -- option to include ticks in both axis
+          axis.ticks.x = element_line(color = "black"),
+          axis.ticks.y = element_line(color = "black"),
+          # -- remove vertical grid lines
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank()
+          )
+      )
+  }
+}
+```
+
+## d)
+
+Compute the variance-covariance matrix.
+
+```{r}
+data_join_sr <- usffr_m %>%
+  inner_join(sp500_m, by = "month_end", suffix = c("","_SP500")) %>%
+  inner_join(gbpusd_m, by = "month_end", suffix = c("","_GBPUSD")) %>%
+  arrange(month_end) %>%
+  select(contains("sr")) %>%
+  rename(
+    EFF    = sr,
+    SP500  = sr_SP500, 
+    GBPUSD = sr_GBPUSD
+  )
+
+data_join_lr <- usffr_m %>%
+  inner_join(sp500_m, by = "month_end", suffix = c("","_SP500")) %>%
+  inner_join(gbpusd_m, by = "month_end", suffix = c("","_GBPUSD")) %>%
+  arrange(month_end) %>%
+  select(contains("lr")) %>%
+  rename(
+    EFF    = lr,
+    SP500  = lr_SP500, 
+    GBPUSD = lr_GBPUSD
+  )
+
+sigma_sr <- cov(data_join_sr, use = "complete.obs")
+
+sigma_lr <- cov(data_join_lr, use = "complete.obs")
+
+kable(
+  sigma_sr,
+  caption = "Variance–Covariance Matrix: Daily Returns",
+  digits = 4
+  )
+
+kable(
+  sigma_lr,
+  caption = "Variance–Covariance Matrix: Log Returns",
+  digits = 4
+  )
+```
+
+# Exercise 3
+
+## a)
+Sample 1000 draws from a Normal distribution with $\mu$ = 0 and $\sigma$ = 1. Plot the histogram of these draws.
+
+```{r, warning=FALSE, message=FALSE}
+# --- set the seed for reproducibility 
+set.seed(123)
+
+# --- define the parameters
+mu    <- 0
+sigma <- 1
+draws <- 1000
+
+# --- create a `data.frame` with the normal distribution "random" draws
+n_dist <- data.frame(x = rnorm(draws, mu, sigma))
+
+# --- plot the histogram 
+ggplot(data = n_dist, aes(x = x)) +
+  geom_histogram(
+    color = "black",
+    fill = "steelblue"
+    ) +
+  scale_y_continuous(
+    expand = c(0,0)
+    ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Histogram of the normal distribution"
+    ) +
+  theme_minimal() +
+  # --- for further details
+  theme(
+    # -- options for axis text and title
+    axis.text.x  = element_text(color = "black"),
+    axis.text.y  = element_text(color = "black"),
+    axis.title.x = element_text(color = "black"),
+    axis.title.y = element_text(color = "black"),
+    # -- option to mark a line in both axis
+    axis.line = element_line(color = "black"),
+    # -- option to include ticks in both axis
+    axis.ticks.x = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black"),
+    # -- remove vertical grid lines
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+    )
+```
+
+We can add a density curve on top. However, to do so, we need to replace frequency counts with densities, on the Y axis.
+```{r, warning=FALSE, message=FALSE}
+ggplot(data = n_dist, aes(x = x)) +
+  geom_histogram(
+    # -- rescales bar heights from counts to proability densities 
+    aes(y = after_stat(density)),
+    color = "black",
+    fill  = "steelblue",
+    bins  = 30,
+    alpha = 0.4
+  ) +
+  geom_density(
+    color = "#C44E52",
+    linewidth = 1
+  ) +
+  scale_y_continuous(
+    expand = c(0, 0)
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Simulated density of a normal distribution"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x  = element_text(color = "black"),
+    axis.text.y  = element_text(color = "black"),
+    axis.title.x = element_text(color = "black"),
+    axis.title.y = element_text(color = "black"),
+    axis.line    = element_line(color = "black"),
+    axis.ticks.x = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black"),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+  )
+
+```
+
+## b)
+```{r, warning=FALSE, message=FALSE}
+# --- set the seed for reproducibility 
+set.seed(123)
+
+# --- define the parameters
+mu    <- 0
+sigma <- 1
+nu    <- 5
+draws <- 1000
+
+# --- create a `data.frame` with the t distribution "random" draws
+t_df5 <- data.frame(x = mu + sigma * rt(draws, df = nu), df = "5", sk = "0")
+
+# --- plot the histogram 
+plot_t_df5 <- ggplot(data = t_df5, aes(x = x)) +
+geom_histogram(
+    # -- rescales bar heights from counts to proability densities 
+    aes(y = after_stat(density)),
+    color = "black",
+    fill  = "steelblue",
+    bins  = 30,
+    alpha = 0.4
+  ) +
+  geom_density(
+    color = "#C44E52",
+    linewidth = 1
+  ) +
+  scale_y_continuous(
+    expand = c(0,0)
+    ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Simulated density of a standardized t-distribution (df = 5)"
+    ) +
+  theme_minimal() +
+  # --- for further details
+  theme(
+    # -- options for axis text and title
+    axis.text.x  = element_text(color = "black"),
+    axis.text.y  = element_text(color = "black"),
+    axis.title.x = element_text(color = "black"),
+    axis.title.y = element_text(color = "black"),
+    # -- option to mark a line in both axis
+    axis.line = element_line(color = "black"),
+    # -- option to include ticks in both axis
+    axis.ticks.x = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black"),
+    # -- remove vertical grid lines
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+    )
+
+plot_t_df5
+```
+
+## c)
+```{r, warning=FALSE, message=FALSE}
+# --- set the seed for reproducibility 
+set.seed(123)
+
+# --- define the parameters
+mu    <- 0
+sigma <- 1
+nu    <- 30
+draws <- 1000
+
+# --- create a `data.frame` with the t distribution "random" draws
+t_df30 <- data.frame(x = mu + sigma * rt(draws, df = nu), df = "30", sk = "0")
+
+# --- plot the histogram 
+plot_t_df30 <- ggplot(data = t_df30, aes(x = x)) +
+  geom_histogram(
+    # -- rescales bar heights from counts to proability densities 
+    aes(y = after_stat(density)),
+    color = "black",
+    fill  = "steelblue",
+    bins  = 30,
+    alpha = 0.4
+  ) +
+  geom_density(
+    color = "#55A868",
+    linewidth = 1
+  ) +
+  scale_y_continuous(
+    expand = c(0,0)
+    ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Simulated density of a standardized t-distribution (df = 30)"
+    ) +
+  theme_minimal() +
+  # --- for further details
+  theme(
+    # -- options for axis text and title
+    axis.text.x  = element_text(color = "black"),
+    axis.text.y  = element_text(color = "black"),
+    axis.title.x = element_text(color = "black"),
+    axis.title.y = element_text(color = "black"),
+    # -- option to mark a line in both axis
+    axis.line = element_line(color = "black"),
+    # -- option to include ticks in both axis
+    axis.ticks.x = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black"),
+    # -- remove vertical grid lines
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+    )
+
+plot_t_df5  <- plot_t_df5  + labs(title = NULL)
+plot_t_df30 <- plot_t_df30 + labs(title = NULL)
+
+(plot_t_df5 + plot_t_df30) +
+  plot_annotation(
+    title = "Simulated densities of standardized student t-distributions",
+    subtitle = "Effect of degrees of freedom: 5 vs 30"
+  )
+```
+
+```{r}
+# --- combine the two into one data frame
+t_df5_df30 <- rbind(t_df5, t_df30)
+
+# --- overlap the densities in a single plot 
+plot_t_df5_df30_overlap <- ggplot(t_df5_df30, aes(x = x, color = df)) +
+  geom_density(
+    linewidth = 1,
+    fill = NA
+    ) + 
+  scale_color_manual(
+    values = c("5" = "#C44E52", "30" = "#55A868"),
+    name = "degrees of freedom"
+  ) +
+  scale_x_continuous(
+    breaks = seq(
+      floor(min(t_df5_df30$x)),
+      ceiling(max(t_df5_df30$x)),
+      by = 1
+    )
+  ) +
+  scale_y_continuous(
+    expand = c(0,0)
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Overlapping the simulated densities"
+  ) +
+  theme_minimal() +
+  # --- for further details
+  theme(
+    # -- options for axis text and title
+    axis.text.x  = element_text(color = "black"),
+    axis.text.y  = element_text(color = "black"),
+    axis.title.x = element_text(color = "black"),
+    axis.title.y = element_text(color = "black"),
+    # -- option to mark a line in both axis
+    axis.line = element_line(color = "black"),
+    # -- option to include ticks in both axis
+    axis.ticks.x = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black"),
+    # -- remove vertical grid lines
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    # -- legend inside the plot top-rigth 
+    legend.position = c(0.8, 0.8),
+    legend.key = element_blank(),
+    legend.background = element_blank(),
+    ) + 
+  guides(
+    color = guide_legend(override.aes = list(fill = NA))
+  )
+
+plot_t_df5_df30_overlap
+```
+
+
+## d)
+```{r, warning=FALSE, message=FALSE}
+# --- set the seed for reproducibility 
+set.seed(123)
+
+# --- define the parameters
+mu      <- 0
+sigma   <- 1
+nu      <- 5
+epsilon <- 0.5 
+draws   <- 1000
+
+# --- create a `data.frame` with the t distribution "random" draws
+st_df5eps0.5 <- data.frame(
+  x = rst(
+    # -- number of draws,
+    n = draws,
+    # -- location
+    xi = mu,
+    # -- scale parameter (analogous to the standard deviation)
+    omega = sigma,
+    # -- degrees of freedom 
+    nu = nu ,
+    # -- skewness 
+    alpha = epsilon
+  ),
+  df = "5",
+  sk = "0.5"
+)
+
+# --- plot the histogram 
+plot_st_df5eps0.5 <- ggplot(data = st_df5eps0.5, aes(x = x)) +
+  geom_histogram(
+    # -- rescales bar heights from counts to proability densities 
+    aes(y = after_stat(density)),
+    color = "black",
+    fill  = "steelblue",
+    bins  = 30,
+    alpha = 0.4
+  ) +
+  geom_density(
+    color = "#8172B3", 
+
+    linewidth = 1
+  ) +
+  scale_y_continuous(
+    expand = c(0,0)
+    ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Simulated density of a standardized skewed t-distribution (df = 5, eps = 0.5)"
+    ) +
+  theme_minimal() +
+  # --- for further details
+  theme(
+    # -- options for axis text and title
+    axis.text.x  = element_text(color = "black"),
+    axis.text.y  = element_text(color = "black"),
+    axis.title.x = element_text(color = "black"),
+    axis.title.y = element_text(color = "black"),
+    # -- option to mark a line in both axis
+    axis.line = element_line(color = "black"),
+    # -- option to include ticks in both axis
+    axis.ticks.x = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black"),
+    # -- remove vertical grid lines
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+    )
+
+plot_t_df5        <- plot_t_df5  + labs(title = NULL)
+plot_st_df5eps0.5 <- plot_st_df5eps0.5 + labs(title = NULL)
+
+(plot_t_df5 + plot_st_df5eps0.5) +
+  plot_annotation(
+    title = "Simulated densities of standardized student t-distributions",
+    subtitle = "Effect of skewness: 0 vs 0.5"
+  )
+```
+
+```{r}
+# --- combine the two into one data frame
+t_df5_df5eps0.5 <- rbind(t_df5, st_df5eps0.5)
+
+# --- overlap the densities in a single plot 
+plot_t_df5_df5eps0.5_overlap <- ggplot(t_df5_df5eps0.5, aes(x = x, color = sk)) +
+  geom_density(
+    linewidth = 1,
+    fill = NA
+    ) + 
+  scale_color_manual(
+    values = c("0" = "#C44E52", "0.5" = "#8172B3"),
+    name = "skewness"
+  ) +
+  scale_x_continuous(
+    breaks = seq(
+      floor(min(t_df5_df5eps0.5$x)),
+      ceiling(max(t_df5_df5eps0.5$x)),
+      by = 1
+    )
+  ) +
+  scale_y_continuous(
+    expand = c(0,0)
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Overlapping the simulated densities"
+  ) +
+  theme_minimal() +
+  # --- for further details
+  theme(
+    # -- options for axis text and title
+    axis.text.x  = element_text(color = "black"),
+    axis.text.y  = element_text(color = "black"),
+    axis.title.x = element_text(color = "black"),
+    axis.title.y = element_text(color = "black"),
+    # -- option to mark a line in both axis
+    axis.line = element_line(color = "black"),
+    # -- option to include ticks in both axis
+    axis.ticks.x = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black"),
+    # -- remove vertical grid lines
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    # -- legend inside the plot top-rigth 
+    legend.position = c(0.8, 0.8),
+    legend.key = element_blank(),
+    legend.background = element_blank(),
+    ) + 
+  guides(
+    color = guide_legend(override.aes = list(fill = NA))
+  )
+
+plot_t_df5_df5eps0.5_overlap
+
+```
+
+## e)
+```{r, warning=FALSE, message=FALSE}
+# --- set the seed for reproducibility 
+set.seed(123)
+
+# --- define the parameters
+mu      <- 0
+sigma   <- 1
+nu      <- 5
+epsilon <- 2 
+draws   <- 1000
+
+# --- create a `data.frame` with the t distribution "random" draws
+st_df5eps2 <- data.frame(
+  x = rst(
+    # -- number of draws,
+    n = draws,
+    # -- location
+    xi = mu,
+    # -- scale parameter (analogous to the standard deviation)
+    omega = sigma,
+    # -- degrees of freedom 
+    nu = nu ,
+    # -- skewness 
+    alpha = epsilon
+  ),
+  df = "5",
+  sk = "2"
+)
+
+# --- plot the histogram 
+plot_st_df5eps2 <- ggplot(data = st_df5eps2, aes(x = x)) +
+  geom_histogram(
+    # -- rescales bar heights from counts to proability densities 
+    aes(y = after_stat(density)),
+    color = "black",
+    fill  = "steelblue",
+    bins  = 30,
+    alpha = 0.4
+  ) +
+  geom_density(
+    color = "#E1C16E" ,
+    linewidth = 1
+  ) +
+  scale_y_continuous(
+    expand = c(0,0)
+    ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Simulated density of a standardized skewed t-distribution (df = 5, eps = 2)"
+    ) +
+  theme_minimal() +
+  # --- for further details
+  theme(
+    # -- options for axis text and title
+    axis.text.x  = element_text(color = "black"),
+    axis.text.y  = element_text(color = "black"),
+    axis.title.x = element_text(color = "black"),
+    axis.title.y = element_text(color = "black"),
+    # -- option to mark a line in both axis
+    axis.line = element_line(color = "black"),
+    # -- option to include ticks in both axis
+    axis.ticks.x = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black"),
+    # -- remove vertical grid lines
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+    )
+
+plot_t_df5  <- plot_t_df5  + labs(title = NULL)
+plot_st_df5eps2 <- plot_st_df5eps2 + labs(title = NULL)
+
+(plot_t_df5 + plot_st_df5eps2) +
+  plot_annotation(
+    title = "Simulated densities of standardized student t-distributions",
+    subtitle = "Effect of skewness: 0 vs 2"
+  )
+```
+
+```{r}
+# --- combine the three into one data frame
+t_df5_df5eps0.5_df5eps2 <- rbind(t_df5, st_df5eps0.5, st_df5eps2)
+
+# --- overlap the densities in a single plot 
+plot_t_df5_df5eps0.5_df5eps2_overlap <- ggplot(t_df5_df5eps0.5_df5eps2, aes(x = x, color = sk)) +
+  geom_density(
+    linewidth = 1,
+    fill = NA
+    ) + 
+  scale_color_manual(
+    values = c("0" = "#C44E52", "0.5" = "#8172B3", "2" =  "#E1C16E"),
+    name = "skewness"
+  ) +
+  scale_x_continuous(
+    breaks = seq(
+      floor(min(t_df5$x)),
+      ceiling(max(st_df5eps0.5$x)),
+      by = 1
+    )
+  ) +
+  scale_y_continuous(
+    expand = c(0,0)
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Overlapping the simulated densities"
+  ) +
+  theme_minimal() +
+  # --- for further details
+  theme(
+    # -- options for axis text and title
+    axis.text.x  = element_text(color = "black"),
+    axis.text.y  = element_text(color = "black"),
+    axis.title.x = element_text(color = "black"),
+    axis.title.y = element_text(color = "black"),
+    # -- option to mark a line in both axis
+    axis.line = element_line(color = "black"),
+    # -- option to include ticks in both axis
+    axis.ticks.x = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black"),
+    # -- remove vertical grid lines
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    # -- legend inside the plot top-rigth 
+    legend.position = c(0.8, 0.8),
+    legend.key = element_blank(),
+    legend.background = element_blank(),
+    ) + 
+  guides(
+    color = guide_legend(override.aes = list(fill = NA))
+  )
+
+plot_t_df5_df5eps0.5_df5eps2_overlap
+
+```

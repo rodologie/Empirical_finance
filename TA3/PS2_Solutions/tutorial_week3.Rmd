@@ -1,0 +1,887 @@
+---
+title: "Empirical Finance: Tutorial - Week 3"
+author: "Tomás Cordeiro da Silva"
+date: "2024-01-22"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: false
+    self_contained: true
+---
+
+# Setup
+
+## Working Directory
+
+```{r, warning=FALSE, message=FALSE}
+# --- confirm working directory
+getwd()
+
+# --- list existing files
+list.files()
+```
+
+## Housekeeping
+
+```{r, warning=FALSE, message=FALSE}
+# --- removes all objects from the the current environment
+rm(list = ls())
+```
+
+## Packages
+
+```{r, warning=FALSE, message=FALSE}
+# --- defining the packages required
+packages <- c(
+  "quantmod",   # download and handling of financial time-series data
+  "tidyverse",  # data manipulation, transformation, and visualization
+  "lubridate",  # date and time manipulation
+  "patchwork",  # composition and layout of multiple ggplot2 graphs
+  "latex2exp",  # LaTeX-style mathematical expressions in plots
+  "readxl",     # import of Excel files (.xls, .xlsx)
+  "forecast",   # time-series forecasting and model evaluation
+  "tseries"     # time-series analysis, including unit root tests (adf.test)
+)
+
+# --- from the ones needed extract the ones not installed
+to_install <- packages[!packages %in% installed.packages()[, "Package"]]
+
+# --- install the packages
+if (length(to_install) > 0) {
+  install.packages(to_install)
+}
+
+# --- load the packages in our session
+invisible(lapply(packages, library, character.only = TRUE))
+```
+
+## Functions
+```{r, warning=FALSE, message=FALSE}
+source("functions/nice_acf.R")
+source("functions/nice_pacf.R")
+source("functions/line_plot.R")
+source("functions/plot_res.R")
+source("functions/fit_arma.R")
+```
+
+# Exercise 1 
+
+## Setup
+
+### Parameters
+```{r, warning=FALSE, message=FALSE}
+# --- seed for reproducibility
+set.seed(9876543)
+
+# --- constant
+c       <- 0.2
+
+# --- coefficients
+beta    <- 0.1
+delta   <- 0.05
+phi_1   <- 0.4
+phi_2   <- 0.3
+phi_3   <- 0.2
+theta_1 <- 0.4
+theta_2 <- 0.3
+
+# --- error term parameters
+mu      <- 0
+sigma   <- 1
+
+# --- number of time steps 
+n       <- 1000
+
+# --- generate the error term
+epsilon <- rnorm(1000, mean = mu, sd = sigma)
+```
+
+### Storage Object
+```{r, warning=FALSE, message=FALSE}
+# --- create an empty `data.frame` to store all processes
+time_series <- data.frame(
+  period = 1:n,
+  yt_1 = numeric(n),
+  yt_2 = numeric(n),
+  yt_3 = numeric(n),
+  yt_4 = numeric(n),
+  yt_5 = numeric(n),
+  yt_6 = numeric(n),
+  yt_7 = numeric(n),
+  yt_8 = numeric(n)
+  )
+
+# --- labelling each object 
+labels <- c(
+  yt_1 = "White Noise",
+  yt_2 = "Trend Stationary",
+  yt_3 = "Random Walk",
+  yt_4 = "AR(1)", 
+  yt_5 = "AR(3)",
+  yt_6 = "MA(1)",
+  yt_7 = "MA(2)",
+  yt_8 = "ARMA(1,1)"
+)
+
+# --- formulas
+formulas <- c(
+  yt_1 = TeX("$y_{t} = c + \\epsilon_{t}$"),
+  yt_2 = TeX("$y_{t} = c + \\beta t + \\delta t^2 + \\epsilon_{t}$"),
+  yt_3 = TeX("$y_{t} = c + y_{t-1} + \\epsilon_{t}$"),
+  yt_4 = TeX("$y_{t} = c + \\phi_{1} y_{t-1} + \\epsilon_{t}$"), 
+  yt_5 = TeX("$y_{t} = c + \\phi_{1} y_{t-1} + \\phi_{2} y_{t-2} + \\phi_{3} y_{t-3} + \\epsilon_{t}$"),
+  yt_6 = TeX("$y_{t} = c + \\epsilon_{t} + \\theta_{1} \\epsilon_{t-1}$"),
+  yt_7 = TeX("$y_{t} = c + \\epsilon_{t} + \\theta_{1} \\epsilon_{t-1} + \\theta_{2} \\epsilon_{t-2}$"),
+  yt_8 = TeX("$y_{t} = c + \\phi_{1} y_{t-1} + \\epsilon_t + \\theta_{1} \\epsilon_{t-1}$")
+)
+```
+
+
+## 1. White Noise 
+
+$$
+y_{t} = c + \epsilon_t
+$$
+
+```{r, warning=FALSE, message=FALSE}
+for (t in 1:n){
+  time_series$yt_1[t] <- c + epsilon[t]
+}
+
+# --- plot of the process
+line_plot(time_series, "yt_1")
+
+# --- R in-built ACF and PACF plot
+par(mfrow = c(1, 2))
+acf(time_series$yt_1 , main = "ACF: White Noise")
+pacf(time_series$yt_1, main = "PACF: White Noise")
+
+# --- own ACF and PACF plot
+nice_acf(time_series, "yt_1") + nice_pacf(time_series, "yt_1")
+```
+
+## 2. Trend Stationarity 
+
+$$
+y_t = c + \beta t + \delta t^2 + \epsilon
+$$
+
+```{r, warning=FALSE, message=FALSE}
+# --- generate the trend
+tt <- (1:n)
+t2 <- (1:n)^2
+
+for (t in 1:n){
+  time_series$yt_2[t] <- c + beta*tt[t] + delta*t2[t] + epsilon[t]
+}
+
+# --- plot of the process
+line_plot(time_series, "yt_2")
+
+# --- R in-built ACF and PACF plot
+par(mfrow = c(1, 2))
+acf(time_series$yt_2 , main = "ACF: Trend Stationarity")
+pacf(time_series$yt_2, main = "PACF: WTrend Stationarity")
+
+# --- own ACF and PACF plot
+nice_acf(time_series, "yt_2") + nice_pacf(time_series, "yt_2")
+```
+
+## 3. Random Walk
+
+$$
+y_t = c + y_{t-1} + \epsilon_t
+$$
+```{r, warning=FALSE, message=FALSE}
+# --- initialize the time series with a normal shock
+time_series$yt_3[1] = c + epsilon[1]
+
+for (t in 2:n){
+  time_series$yt_3[t] <- c + time_series$yt_3[(t-1)] + epsilon[t]
+}
+
+# --- plot of the process
+line_plot(time_series, "yt_3")
+
+# --- R in-built ACF and PACF plot
+par(mfrow = c(1, 2))
+acf(time_series$yt_3 , main = "ACF: Random Walk")
+pacf(time_series$yt_3, main = "PACF: Random Walk")
+
+# --- own ACF and PACF plot
+nice_acf(time_series, "yt_3") + nice_pacf(time_series, "yt_3")
+```
+
+## 4. AR(1)
+
+$$
+y_{t} = c + \phi_1 y_{t-1} + \epsilon_t
+$$
+
+The first two moments:
+$$
+\begin{align*}
+\mathbb{E}(y_t) &= \frac{c}{1-\phi_1} \\
+\mathbb{Var}(y_t) &= \frac{\sigma^2}{1-\phi_1^2}
+\end{align*}
+$$
+
+Higher-order autocorrelation:
+$$
+\mathbb{Cor}(y_t, y_{t-j}) = \phi_1^j
+$$
+
+```{r, warning=FALSE, message=FALSE}
+# --- seed for reproducibility
+set.seed(9876543)
+
+# --- calculate unconditional mean and volatility
+emean <-         c/(1-phi_1)
+evar  <- (sigma^2)/(1-(phi_1^2))
+
+# --- initialize the time series with a normal shock
+time_series$yt_4[1] = rnorm(1, mean = emean, sd = evar)
+
+# --- generate an AR(1) without using arima
+for (t in 2:n){
+  time_series$yt_4[t] <- c + phi_1*time_series$yt_4[(t-1)] + epsilon[t]
+}
+
+# --- plot of the process
+line_plot(time_series, "yt_4")
+
+# --- R in-built ACF and PACF plot
+par(mfrow = c(1, 2))
+acf(time_series$yt_4 , main = "ACF: AR(1)")
+pacf(time_series$yt_4, main = "PACF: AR(1)")
+
+# --- own ACF and PACF plot
+nice_acf(time_series, "yt_4") + nice_pacf(time_series, "yt_4")
+```
+
+## 5. AR(3)
+
+$$
+y_{t} = c + \phi_1 y_{t-1} +\phi_2 y_{t-2} + \phi_3 y_{t-3} + \epsilon_t
+$$
+
+The first two moments:
+$$
+\begin{align*}
+\mathbb{E}(y_t) &= \frac{c}{1-\sum_{i=1}^3\phi_i} \\
+\mathbb{Var}(y_t) &= \frac{\sigma^2}{1-\sum_{i=1}^3\phi_i^2}
+\end{align*}
+$$
+
+```{r, warning=FALSE, message=FALSE}
+# --- seed for reproducibility
+set.seed(9876543)
+
+# --- calculate unconditional mean and volatility
+emean <-         c/(1-(phi_1+phi_2+phi_3))
+evar  <- (sigma^2)/(1-((phi_1+phi_2+phi_3))^2)
+
+# --- initialize the time series with a normal shock
+time_series$yt_5[(1:3)] = rnorm(3, mean = emean, sd = evar)
+
+# --- generate an AR(3) without using arima
+for (t in 4:n){
+  time_series$yt_5[t] <- c + phi_1*time_series$yt_5[(t-1)] + phi_2*time_series$yt_5[(t-2)] + phi_3*time_series$yt_5[(t-3)] + epsilon[t]
+}
+
+# --- define the capital phi matrix
+C <- matrix(
+  c(phi_1, phi_2, phi_3,
+    1,    0,    0,
+    0,    1,    0),
+  nrow = 3,
+  byrow = TRUE
+)
+
+# --- compute eigenvalues to assess stationary
+eigen(C, only.values = TRUE)$values
+
+# --- plot of the process
+line_plot(time_series, "yt_5")
+
+# --- R in-built ACF and PACF plot
+par(mfrow = c(1, 2))
+acf(time_series$yt_5 , main = "ACF: AR(3)")
+pacf(time_series$yt_5, main = "PACF: AR(3)")
+
+# --- own ACF and PACF plot
+nice_acf(time_series, "yt_5") + nice_pacf(time_series, "yt_5")
+```
+
+## 6. MA(1)
+
+$$
+y_t = c + \epsilon_t + \theta_1 \epsilon_{t-1}
+$$
+
+The first two moments:
+$$
+\begin{align*}
+\mathbb{E}(y_t) &= c \\ \\
+\mathbb{Var}(y_t) &= \sigma^2(1+\theta_1^2)
+\end{align*}
+$$
+
+```{r, warning=FALSE, message=FALSE}
+# --- seed for reproducibility
+set.seed(9876543)
+
+# --- calculate unconditional mean and volatility
+emean <- c
+evar  <- (sigma^2)/(1 + (theta_1^2))
+
+# --- initialize the time series with a normal shock
+time_series$yt_6[1] = rnorm(1, mean = emean, sd = evar)
+
+# --- generate an MA(1) without using arima
+for (t in 2:n){
+  time_series$yt_6[t] <- c + epsilon[t] + theta_1*epsilon[t-1]
+}
+
+# --- plot of the process
+line_plot(time_series, "yt_6")
+
+# --- R in-built ACF and PACF plot
+par(mfrow = c(1, 2))
+acf(time_series$yt_6 , main = "ACF: MA(1)")
+pacf(time_series$yt_6, main = "PACF: MA(1)")
+
+# --- own ACF and PACF plot
+nice_acf(time_series, "yt_6") + nice_pacf(time_series, "yt_6")
+```
+
+## 7. MA(2)
+$$
+y_t = c + \epsilon_t + \theta_1 \epsilon_{t-1} + \theta_2 \epsilon_{t-2}
+$$
+The first two moments:
+$$
+\begin{align*}
+\mathbb{E}(y_t) &= c \\ \\
+\mathbb{Var}(y_t) &= \sigma^2(1+\theta_1^2 + \theta_2^2)
+\end{align*}
+$$
+Higher-order autocorrelation:
+$$
+\mathbb{Cor}(y_t, y_{t-j}) =
+\begin{cases}
+\displaystyle \frac{\sum_{i=0}^{2-j} \theta_i \theta_{i+j}}{\sum_{i=0}^2 \theta_i^2} &, & j \le 2 \\
+0 &, & j > 2
+\end{cases}
+$$
+
+```{r, warning=FALSE, message=FALSE}
+# --- seed for reproducibility
+set.seed(9876543)
+
+# --- calculate unconditional mean and volatility
+emean <- c
+evar  <- (sigma^2)/(1 + (theta_1^2) + (theta_2^2))
+
+# --- initialize the time series with a normal shock
+time_series$yt_7[(1:2)] = rnorm(2, mean = emean, sd = evar)
+
+# --- generate an AR(1) without using arima
+for (t in 3:n){
+  time_series$yt_7[t] <- c + epsilon[t] + theta_1*epsilon[t-1] + theta_2*epsilon[t-2]
+}
+
+# --- plot of the process
+line_plot(time_series, "yt_6")
+
+# --- R in-built ACF and PACF plot
+par(mfrow = c(1, 2))
+acf(time_series$yt_7 , main = "ACF: MA(2)")
+pacf(time_series$yt_7, main = "PACF: MA(2)")
+
+# --- own ACF and PACF plot
+nice_acf(time_series, "yt_7") + nice_pacf(time_series, "yt_7")
+```
+
+## 8. ARMA(1,1)
+
+$$
+y_t = c + \phi_1 y_{t-1} + \epsilon_t + \theta_1 \epsilon_{t-1}
+$$
+The first moments:
+$$
+\begin{align*}
+\mathbb{E}(y_t) &= \mathbb{E}\left(\frac{c}{1-\phi} + \sum_{i=0}^{\infty} \phi_1^{i} \epsilon_{t-i} + \theta_1\epsilon_{t-1}\right)\\
+&= \frac{c}{1-\phi} + \sum_{i=0}^{\infty} \phi_1^{i} \underbrace{\mathbb{E}(\epsilon_{t-i})}_{=0} + \theta_1 \underbrace{\mathbb{E}(\epsilon_{t-1}}_{=0}) \\
+&= \frac{c}{1-\phi}
+\end{align*}
+$$
+$$
+\mathbb{Var}(y_t) = \frac{\sigma^2(1+\theta_1^2+2\phi_1\theta_1)}{1-\phi_1^2}
+$$
+
+```{r, warning=FALSE, message=FALSE}
+# --- seed for reproducibility
+set.seed(9876543)
+
+# --- calculate unconditional mean and volatility
+emean <-         c/(1-phi_1)
+evar  <- (sigma^2*(1+theta_1^2+2*phi_1*theta_1))/(1-(phi_1^2))
+
+# --- initialize the time series with a normal shock
+time_series$yt_8[1] = rnorm(1, mean = emean, sd = evar)
+
+# --- generate an AR(1) without using arima
+for (t in 2:n){
+  time_series$yt_8[t] <- c + phi_1* time_series$yt_8[t-1] + epsilon[t] + theta_1*epsilon[t-1] 
+}
+
+# --- plot of the process
+line_plot(time_series, "yt_8")
+
+# --- R in-built ACF and PACF plot
+par(mfrow = c(1, 2))
+acf(time_series$yt_8 , main = "ACF: ARMA(1,1)")
+pacf(time_series$yt_8, main = "PACF: ARMA(1,1)")
+
+# --- own ACF and PACF plot
+nice_acf(time_series, "yt_8") + nice_pacf(time_series, "yt_8")
+```
+
+# Exercise 2
+
+## Data 
+
+### S&P500 Index
+```{r}
+getSymbols(Symbols = "^GSPC", src = "yahoo")
+
+SP500 <- data.frame(
+  # -- extracts the index, which in xts objects is the date 
+  date  = index(GSPC),
+  # -- extracts "GSPC.Adjusted"; alternative: GSPC[, "GSPC.Adjusted"]
+  SP500 = as.numeric(Ad(GSPC))
+)
+
+# SP500 <- read_excel("data.xlsx", sheet = 1) %>%
+#   mutate(date = as.Date(date))
+```
+
+### GBPUSD Exchange Rate
+```{r}
+getSymbols(Symbols = "GBPUSD=X", src = "yahoo")
+
+GBPUSD <- data.frame(
+  date  = index(`GBPUSD=X`),
+  GBPUSD = as.numeric(Ad(`GBPUSD=X`))
+)
+
+# GBPUSD <- read_excel("data.xlsx", sheet = 2) %>%
+#   mutate(date = as.Date(date))
+```
+
+### TBILL Rate 
+```{r}
+getSymbols(Symbols = "TBIL", src = "yahoo")
+
+TBILL <- data.frame(
+  date  = index(TBIL),
+  TBILL = as.numeric(Ad(TBIL))
+)
+
+# TBILL <- read_excel("data.xlsx", sheet = 3) %>%
+#   mutate(date = as.Date(date))
+```
+
+### VIX Index
+```{r}
+getSymbols(Symbols = "^VIX", src = "yahoo")
+
+VIX <- data.frame(
+  date  = index(VIX),
+  VIX = as.numeric(Ad(VIX))
+)
+
+# VIX <- read_excel("data.xlsx", sheet = 4) %>%
+#   mutate(date = as.Date(date))
+```
+
+## Sationarity 
+
+### Visual Inspection
+```{r, message=FALSE, warning=FALSE}
+time_series_list <- list(
+  SP500  = SP500, 
+  GBPUSD = GBPUSD, 
+  TBILL  = TBILL, 
+  VIX    = VIX
+  )
+
+labels <- c(
+  SP500 = "S&P500 Index",
+  GBPUSD = "GBPUSD Exchange Rate", 
+  TBILL  = "TBILL Rate", 
+  VIX    = "VIX Index"
+)
+
+lapply(names(time_series_list), function(name) {
+
+  time_series <- time_series_list[[name]]
+  var <- setdiff(names(time_series), "date")[1]
+
+  ggplot(time_series, aes_string(x = "date", y = var)) +
+    geom_line(colour = "blue") +
+    labs(
+      x = NULL,
+      y = NULL,
+      title = labels[[name]]
+      ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(color = "black", hjust = 1),
+      axis.text.y = element_text(color = "black"),
+      plot.title = element_text(face = "bold"),
+      axis.line   = element_line(color = "black"),
+      axis.ticks  = element_line(color = "black"),
+      panel.grid.minor.x = element_blank(),
+      panel.grid.minor.y = element_blank()
+      )
+})
+```
+### Introduce Sationarity
+```{r, message=FALSE, warning=FALSE}
+# --- S&P500 Index
+SP500 <- SP500 %>%
+  mutate(lr = log(SP500) - log(lag(SP500)))
+
+# --- GBPUSD Exchange Rate
+GBPUSD <- GBPUSD %>%
+  mutate(lr = log(GBPUSD) - log(lag(GBPUSD)))
+
+# --- TBILL Rate
+TBILL <- TBILL %>%
+  mutate(lr = TBILL - lag(TBILL))
+
+# --- VIX Index
+VIX <- VIX %>%
+  mutate(lr = log(VIX) - log(lag(VIX)))
+```
+
+```{r, message=FALSE, warning=FALSE}
+time_series_list <- list(
+  SP500  = SP500, 
+  GBPUSD = GBPUSD, 
+  TBILL  = TBILL, 
+  VIX    = VIX
+  )
+
+labels <- c(
+  SP500 = "S&P500 Index",
+  GBPUSD = "GBPUSD Exchange Rate", 
+  TBILL  = "TBILL Rate", 
+  VIX    = "VIX Index"
+)
+
+lapply(names(time_series_list), function(name) {
+
+  time_series <- time_series_list[[name]]
+
+  ggplot(time_series, aes_string(x = "date", y = "lr")) +
+    geom_line(colour = "blue") +
+    labs(
+      x = NULL,
+      y = NULL,
+      title = labels[[name]]
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(color = "black", hjust = 1),
+      axis.text.y = element_text(color = "black"),
+      plot.title = element_text(face = "bold"),
+      axis.line   = element_line(color = "black"),
+      axis.ticks  = element_line(color = "black"),
+      panel.grid.minor.x = element_blank(),
+      panel.grid.minor.y = element_blank()
+    )
+})
+```
+
+```{r, warning=FALSE, message=FALSE}
+lapply(names(time_series_list), function(name) {
+
+  time_series <- time_series_list[[name]]
+  
+  # if (name == "TBILL") {
+  #   
+  #   # par(mfrow = c(1, 2))
+  #   # acf(na.omit(time_series$TBILL) , main = paste("ACF:", name))
+  #   # pacf(na.omit(time_series$TBILL), main = paste("PACF:", name))
+  #   
+  #   nice_acf(time_series, "TBILL", name, lag.max = 20) + nice_pacf(time_series, "TBILL", name, lag.max = 20)
+  #   
+  # } else {
+    
+    # par(mfrow = c(1, 2))
+    # acf(na.omit(time_series$lr) , main = paste("ACF:", name))
+    # pacf(na.omit(time_series$lr), main = paste("PACF:", name))
+    
+    nice_acf(time_series, "lr", name, lag.max = 20) + nice_pacf(time_series, "lr", name, lag.max = 20)
+    
+  # }
+})
+```
+
+### Augmented Dickey–Fuller Test
+We can use this test to evaluate whether a time series is stationary.
+
+**Decision rule:** *p*-value < 0.05, reject $H_0$ in favor of the alternative (i.e. the series is stationary)
+
+```{r, message=FALSE, warning=FALSE}
+lapply(time_series_list, function(ts){
+  adf.test(na.omit(ts$lr))
+})
+```
+We can sucessfully conclude that we have imposed stationary across our series, as the p-value sits below the 5% mark.
+
+## Fitting the Best Model 
+
+**How do we choose \( p \) and \( q \)?**
+
+The selection of the autoregressive order \( p \) and the moving-average order \( q \) typically follows a structured, iterative approach.
+
+**1) Ensure stationarity of the time series** 
+If the series is not stationary, it must be transformed before model estimation.
+
+- Apply first differencing when necessary.  
+- In the case of asset prices, work with log returns, which already correspond to first differences of log prices and are therefore typically stationary.
+
+**2) Form an initial guess for \( p \) and \( q \)**
+Preliminary identification of the model orders can be guided by the autocorrelation structure of the data.
+
+- Use the autocorrelation function (ACF) and the partial autocorrelation function (PACF) to obtain indications of whether an AR, MA, or ARMA specification is appropriate, and to suggest plausible lag lengths.
+
+**3) Estimate the model**
+Estimate the candidate model(s) identified in the previous step.
+
+- Fit the ARMA(\( p, q \)) specification(s) that appear most consistent with the observed ACF and PACF patterns.
+
+**4) Perform model diagnostics**
+Model adequacy is assessed using both information criteria and residual diagnostics.
+
+**Information criteria**
+
+- Information criteria balance goodness of fit against model complexity.  
+- They help determine whether a more parsimonious specification provides a comparable or superior fit.  
+- They guide the choice of the optimal number of lags.  
+- Commonly used criteria include the Akaike Information Criterion (AIC) and the Bayesian (Schwarz) Information Criterion (BIC); the preferred model is the one with the lowest value.
+
+**Test for serial correlation**
+
+- In a correctly specified ARMA model, the residuals should be white noise, meaning they are serially uncorrelated and capture only unpredictable shocks.  
+- Testing for residual autocorrelation is therefore essential to validate the model.  
+- Apply the Ljung–Box (Q-statistic) test to the residuals. Failure to reject the null hypothesis of no serial correlation indicates that the residuals are consistent with white noise and that the model specification is adequate.
+
+
+### S&P500 Index 
+```{r}
+# --- fit an ARMA(1,1) 
+SP500_model <- arima(SP500$lr, order = c(1,0,1))
+summary(SP500_model)
+```
+
+```{r, warning=FALSE, message=FALSE}
+# --- plot the residuals 
+plot_res(SP500_model, "SP500")
+
+# --- plot the ACF of the residuals
+nice_acf(residuals(SP500_model),"SP500", residuals = TRUE)
+
+# --- Ljung-Box test (p-value > 0.05, fail to reject the null, residuals look like WN)
+Box.test(residuals(SP500_model), lag=20, type = "Ljung-Box")
+```
+```{r, warning=FALSE, message=TRUE}
+# --- own automated loop to select p and q
+fit_arma(SP500$lr)
+
+# --- forecast package function
+auto.arima(SP500$lr, ic = "aic")
+```
+
+There are some significant peaks in the ACF of the residuals, especially at higher lags. This is indicative of a poor fit.
+
+If we try the Ljung-Box test, we have statistical evidence for this.
+
+As we suspected, the p-value is less that 0.05 and as such we cannot say that the residuals are a realization of discrete white noise. Hence there is additional autocorrelation in the residuals that is not explained by the fitted ARMA(4,3) model.
+
+### GBPUSD Exchange Rate
+```{r}
+# --- fit an ARMA(1,1) 
+GBPUSD_model <- arima(GBPUSD$lr, order = c(0,0,0))
+summary(GBPUSD_model)
+```
+
+```{r, warning=FALSE, message=FALSE}
+# --- plot the residuals 
+plot_res(GBPUSD_model, "GBPUSD")
+
+# --- plot the ACF of the residuals
+nice_acf(residuals(GBPUSD_model),"GBPUSD", residuals = TRUE)
+
+# --- Ljung-Box test (p-value > 0.05, fail to reject the null, residuals look like WN)
+Box.test(residuals(GBPUSD_model), lag=20, type = "Ljung-Box")
+```
+
+```{r, warning=FALSE, message=TRUE}
+# --- own automated loop to select p and q
+fit_arma(GBPUSD$lr)
+
+# --- forecast package function
+auto.arima(GBPUSD$lr, ic = "aic")
+```
+Our `fit_arma` function seems to disagree with our visual inspection choice. This should not surprise us, because this function is the designed to find the (p,q) pair with the lowest AIC. Stil, it seems we have found a good fit, as the we fail to reject the null in the Ljung-Box text.
+
+### TBILL Rate 
+```{r}
+# --- fit an ARMA(3,3) 
+TBILL_model <- arima(TBILL$lr, order = c(3,0,3))
+summary(TBILL_model)
+```
+
+```{r, warning=FALSE, message=FALSE}
+# --- plot the residuals 
+plot_res(TBILL_model, "TBILL")
+
+# --- plot the ACF of the residuals
+nice_acf(residuals(TBILL_model),"TBILL", residuals = TRUE)
+
+# --- Ljung-Box test (p-value > 0.05, fail to reject the null, residuals look like WN)
+Box.test(residuals(TBILL_model), lag=20, type = "Ljung-Box")
+```
+
+```{r, warning=FALSE, message=TRUE}
+# --- own automated loop to select p and q
+fit_arma(TBILL$lr)
+
+# --- forecast package function
+auto.arima(TBILL$lr, ic = "aic")
+```
+
+### VIX Index
+Both the ACF and PACF seem to exhibit a decaying towards 0 profile, consistent with an ARMA process. We start by fitting an ARMA(1,1) and work from there. 
+```{r}
+# --- fit an ARMA(1,1) 
+VIX_model <- arima(VIX$lr, order = c(1,0,1))
+summary(VIX_model)
+```
+
+```{r, warning=FALSE, message=FALSE}
+# --- plot the residuals 
+plot_res(VIX_model, "VIX")
+
+# --- plot the ACF of the residuals
+nice_acf(residuals(VIX_model),"VIX", residuals = TRUE)
+
+# --- Ljung-Box test (p-value > 0.05, fail to reject the null, residuals look like WN)
+Box.test(residuals(VIX_model), lag=20, type = "Ljung-Box")
+```
+
+```{r, warning=FALSE, message=TRUE}
+# --- own automated loop to select p and q
+fit_arma(VIX$lr)
+
+# --- forecast package function
+auto.arima(VIX$lr, ic = "aic")
+```
+
+# Appendix
+
+## AR(1)
+
+$$
+y_{t} = c + \phi_1 y_{t-1} + \epsilon_t
+$$
+
+Let's work out the above expression.
+
+$$
+\begin{align*}
+y_t &= c + \phi_1 (c + \phi_1 y_{t-2} + \epsilon_{t-1}) + \epsilon_t \\
+    &= c + \phi_1 c + \phi_{1}^{2} y_{t-2}  + \phi_1 \epsilon_{t-1} + \epsilon_t \\
+    &= c + \phi_1 c + \phi_{1}^{2}(c + \phi_1 y_{t-3} + \epsilon_{t-2}) + \phi_1 \epsilon_{t-1} + \epsilon_t \\
+    &= c + \phi_1 c + \phi_{1}^{2}c + \phi_{1}^{3}y_{t-3} + \phi_{1}^{2} \epsilon_{t-2} + \phi_1 \epsilon_{t-1} + \epsilon_t \\
+    &= \dots \\
+    &= c \sum_{i=0}^{t-1}\phi_1^{i} + \phi_1^{t} y_0 +\sum_{i=0}^{t-1}\phi_1^{i} \epsilon_{t-i}
+\end{align*}
+$$
+
+With $|\phi_1| < 1$: $\lim_{t \to \infty} \phi_1^{t} y_0 = 0$. Also, with $t \to \infty$ and by the property of geometric series: $\sum_{i=0}^{\infty} \phi_1^{i} = \frac{1}{1 - \phi_1}$
+
+Rewriting the above expression we have that
+$$
+y_t = \frac{c}{1-\phi} + \sum_{i=0}^{\infty} \phi_1^{i} \epsilon_{t-i}
+$$
+
+Therefore, the $AR(1)$ has a $MA(\infty)$ representation.
+
+We can use this representation to write the following moments.
+
+### Unconditional Mean 
+
+$$
+\begin{align*}
+\mathbb{E}(y_t) &= \mathbb{E\left(\frac{c}{1-\phi_1} + \sum_{i=0}^{\infty} \phi_1^{i} \epsilon_{t-i} \right)} \\
+&= \frac{c}{1-\phi_1} + \sum_{i=0}^{\infty} \phi_1^{i} \underbrace{\mathbb{E}(\epsilon_{t-i})}_{=0} \\
+&= \frac{c}{1-\phi_1}
+\end{align*}
+$$
+
+### Unconditional Variance
+
+$$
+\begin{align*}
+\mathbb{Var}(y_t) &= \mathbb{E}[(y_t - \mathbb{E}(y_t))^2] \\
+&= \mathbb{E}\left[\left(y_t - \frac{c}{1-\phi_1}\right)^2\right] \\
+&= \mathbb{E}\left[\left(\sum_{i=0}^{\infty} \phi_1^{i} \epsilon_{t-i}\right)^2\right] \\
+\end{align*}
+$$
+
+Let's rewrite the expression inside the expectation operator.
+
+$$
+\begin{align*}
+\left(\sum_{i=0}^{\infty} \phi_1^{i} \epsilon_{t-i}\right)^2 &= (\epsilon_{t} + \phi_1\epsilon_{t-1} + \phi_1^2\epsilon_{t-2} + \dots)^2 \\
+&= \epsilon_t^2 + \phi_1 \epsilon_t\epsilon_{t-1} + \phi_1^2\epsilon_t\epsilon_{t-2} + \dots + \phi_1\epsilon_t\epsilon_{t-1} + \phi_1^2\epsilon_{t-1}^2 + \phi_1^3 \epsilon_{t-1}\epsilon_{t-2} +\dots + \phi_1^2\epsilon_t\epsilon_{t-2} + \phi_1^3\epsilon_{t-1}\epsilon_{t-2} + \phi_1^4\epsilon_{t-2}^2 + \dots \\
+& = \epsilon_t^2 + \phi_1^2\epsilon_{t-1}^2 + \phi_1^4\epsilon_{t-2}^2 + 2\phi_1\epsilon_t\epsilon_{t-1} + 2\phi_1^2\epsilon_t\epsilon_{t-2} + 2\phi_1^3\epsilon_{t-1}\epsilon_{t-2} + \dots \\
+&= \sum_{i=0}^{\infty} \phi_1^{2i} \epsilon_{t-i}^2 + \sum_{i=0}^{\infty} \sum_{j=0}^{\infty} \phi_1^{i+j} \epsilon_{t-i}\epsilon_{t-j} \text{ , with } i \neq j
+\end{align*}
+$$
+
+Using this simplified expression,
+
+$$
+\begin{align*}
+\mathbb{Var}(y_t) &= \mathbb{E}\left[\sum_{i=0}^{\infty} \phi_1^{2i} \epsilon_{t-i}^2 + \sum_{i=0}^{\infty} \sum_{j=0}^{\infty} \phi_1^{i+j} \epsilon_{t-i}\epsilon_{t-j}\right] \\
+&= \sum_{i=0}^{\infty} \phi_1^{2i} \mathbb{E}(\epsilon_{t-i}^2) + \sum_{i=0}^{\infty} \sum_{j=0}^{\infty} \mathbb{E}(\epsilon_{t-i}\epsilon_{t-j}) \\
+&= \sum_{i=0}^{\infty} \phi_1^{2i} \mathbb{E}[(\epsilon_{t-i}-0)^2] + \sum_{i=0}^{\infty} \sum_{j=0}^{\infty} \mathbb{E}[(\epsilon_{t-i}-0)(\epsilon_{t-i}-0)] \\
+&= \underbrace{\sum_{i=0}^{\infty} \phi_1^{2i} \underbrace{\mathbb{Var}(\epsilon_{t-i})}_{=\sigma^2}}_{\text{convergent series to} \frac{1}{1-\phi_1^2}} + \sum_{i=0}^{\infty} \sum_{j=0}^{\infty} \underbrace{\mathbb{Cov}(\epsilon_{t-i},\epsilon_{t-i})}_{=0} \\
+&= \frac{\sigma^2}{1-\phi_1^2}
+\end{align*}
+$$
+
+## ARMA(1,1)
+
+$$
+y_t = c + \phi_1 y_{t-1} + \epsilon_t + \theta_1 \epsilon_{t-1}
+$$
+
+### Unconditional Variance
+
+$$
+\begin{align*}
+\mathbb{Var}(y_t) &= \phi_1^2\mathbb{Var}(y_{t-1}) + \mathbb{Var}(\epsilon_t) + \theta_1^2\mathbb{Var}(\epsilon_{t-1}) + 2\mathbb{Cov}(\phi_1y_{t-1}, \epsilon_t) + 2\mathbb{Cov}(\phi_1y_{t-1}, \phi_1\epsilon_{t-1}) + 2\mathbb{Cov}(\epsilon_t, \theta_1\epsilon_{t-1}) \\
+&= \phi_1^2\mathbb{Var}(y_t) + \sigma^2 + \theta_1^2\sigma^2 + 2\underbrace{\mathbb{E}\left[ \phi_1 \left(y_{t-1} - \frac{c}{1-\phi_1} \right)\epsilon_t\right]}_{=0} + 2\mathbb{E}\left[ \phi_1 \left(y_{t-1} - \frac{c}{1-\phi_1} \right)\theta_1\epsilon_{t-1}\right] + 2\underbrace{\mathbb{E}[\epsilon_t \theta_1 \epsilon_{t-1}]}_{=0} \\
+\Leftrightarrow (1- \phi_1^2) \mathbb{Var}(y_t) &= \sigma^2 + \theta_1^2\sigma^2 + 2\phi_1\theta_1\underbrace{\mathbb{E}(\epsilon_{t-1}^2)}_{= \sigma^2} \\
+\Leftrightarrow  \mathbb{Var}(y_t) &= \frac{\sigma^2(1+\theta_1^2\sigma^2+2\phi_1\theta_1)}{(1- \phi_1^2)}
+\end{align*}
+$$

@@ -1,0 +1,100 @@
+---
+title: "tuto_week5"
+author: "Rodolphe"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Working Directory
+
+```{r, warning=FALSE, message=FALSE}
+# --- confirm working directory
+getwd()
+
+# --- list existing files
+list.files()
+```
+
+## Housekeeping
+
+```{r, warning=FALSE, message=FALSE}
+# --- removes all objects from the the current environment
+rm(list = ls())
+```
+
+## Packages
+
+```{r, warning=FALSE, message=FALSE}
+# --- defining the packages required
+packages <- c(
+  "quantmod",   # download time-series 
+  "tidyverse",  # data manipulation and visualization
+  "stargazer",  # publication-ready tables
+  "conflicted", # management of function name conflicts across packages
+  "moments",    # statistical moments, like skewness and kurtosis 
+  "lubridate",  # manipulation of data
+  "knitr",      # integrate R code with text (e.g. LaTeX, HTML, Markdown)
+  "sn",         # simulation of skewed distributions
+  "patchwork",   # composition of graphs
+  "zoo",
+  "readxl"
+)
+
+# --- from the ones needed extract the ones not installed
+to_install <- packages[!packages %in% installed.packages()[, "Package"]]
+
+# --- install the packages
+if (length(to_install) > 0) {
+  install.packages(to_install)
+}
+
+# --- load the packages in our session
+invisible(lapply(packages, library, character.only = TRUE))
+
+# --- defining `lag()` from the dplyr package as the preference
+conflict_prefer("lag", "dplyr")
+```
+
+```{r}
+raw_data <- read_excel(
+  "Rodolphe_Lajugie_emp_data_20260204090220.xlsx",
+  sheet = "Price Data"
+)
+
+head(raw_data)
+```
+
+
+```{r}
+aapl_data <- raw_data %>% filter(Ticker == "AAPL")
+msft_data <- raw_data %>% filter(Ticker == "MSFT")
+jnj_data  <- raw_data %>% filter(Ticker == "JNJ")
+
+head(aapl_data)
+```
+
+```{r}
+aapl_ret <- aapl_data %>%
+  arrange(Date) %>%
+  mutate(ret = diff(log(Close))) %>%
+  select(Date, ret)
+
+msft_ret <- msft_data %>%
+  arrange(Date) %>%
+  mutate(ret = diff(log(Close))) %>%
+  select(Date, ret)
+
+jnj_ret <- jnj_data %>%
+  arrange(Date) %>%
+  mutate(ret = diff(log(Close))) %>%
+  select(Date, ret)
+```
+
+
+```{r}
+price_xts <- xts(prices[,-1], order.by = prices$Date)
+```

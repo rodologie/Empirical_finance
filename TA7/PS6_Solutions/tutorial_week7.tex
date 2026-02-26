@@ -1,0 +1,946 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Empirical Finance: Tutorial - Week 6},
+  pdfauthor={Tomás Cordeiro da Silva},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Empirical Finance: Tutorial - Week 6}
+\author{Tomás Cordeiro da Silva}
+\date{2024-02-19}
+
+\begin{document}
+\maketitle
+
+{
+\setcounter{tocdepth}{4}
+\tableofcontents
+}
+\section{Setup}\label{setup}
+
+\subsection{Working Directory}\label{working-directory}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# {-}{-}{-} confirm working directory}
+\FunctionTok{getwd}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "/Users/rodologie/Documents/Imperial/Term2/Empirical Finance/TA/TA7/PS6_Solutions"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# {-}{-}{-} list existing files}
+\FunctionTok{list.files}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "figures"              "tutorial_week7.html"  "tutorial_week7.log"  
+## [4] "tutorial_week7.Rmd"   "tutorial_week7.Rproj" "tutorial_week7.tex"
+\end{verbatim}
+
+\subsection{Housekeeping}\label{housekeeping}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# {-}{-}{-} removes all objects from the the current environment}
+\FunctionTok{rm}\NormalTok{(}\AttributeTok{list =} \FunctionTok{ls}\NormalTok{())}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Packages}\label{packages}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# {-}{-}{-} defining the packages required}
+\NormalTok{packages }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}
+  \StringTok{"tidyverse"}\NormalTok{,  }\CommentTok{\# data manipulation, transformation, and visualization}
+  \StringTok{"optimx"}
+\NormalTok{)}
+
+\CommentTok{\# {-}{-}{-} from the ones needed extract the ones not installed}
+\NormalTok{to\_install }\OtherTok{\textless{}{-}}\NormalTok{ packages[}\SpecialCharTok{!}\NormalTok{packages }\SpecialCharTok{\%in\%} \FunctionTok{installed.packages}\NormalTok{()[, }\StringTok{"Package"}\NormalTok{]]}
+
+\CommentTok{\# {-}{-}{-} install the packages}
+\ControlFlowTok{if}\NormalTok{ (}\FunctionTok{length}\NormalTok{(to\_install) }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{) \{}
+  \FunctionTok{install.packages}\NormalTok{(to\_install)}
+\NormalTok{\}}
+
+\CommentTok{\# {-}{-}{-} load the packages in our session}
+\FunctionTok{invisible}\NormalTok{(}\FunctionTok{lapply}\NormalTok{(packages, library, }\AttributeTok{character.only =} \ConstantTok{TRUE}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\section{Exercise 1}\label{exercise-1}
+
+\[
+\begin{aligned}
+r_t &= \alpha + \beta x_{t-1} + \mu_{t-1} + \epsilon_t
+\\
+x_t &= c + \phi x_{t-1} + u_t
+\\
+\mu_t &= \gamma \mu_{t-1} + \eta_t
+\end{aligned}
+\]
+
+\subsection{Setup}\label{setup-1}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# {-}{-}{-} set seed for reproducibility}
+\FunctionTok{set.seed}\NormalTok{(}\DecValTok{1234}\NormalTok{)}
+
+\CommentTok{\# {-}{-}{-} simulation parameters}
+
+\CommentTok{\# {-}{-}{-} observed}
+\NormalTok{beta      }\OtherTok{\textless{}{-}} \FloatTok{0.5}
+\NormalTok{epsilon\_t }\OtherTok{\textless{}{-}} \FloatTok{0.2}
+\CommentTok{\# {-}{-} predictor}
+\NormalTok{c         }\OtherTok{\textless{}{-}} \DecValTok{0}
+\NormalTok{phi       }\OtherTok{\textless{}{-}} \FloatTok{0.9}
+\NormalTok{x\_0       }\OtherTok{\textless{}{-}}\NormalTok{ c}\SpecialCharTok{/}\NormalTok{(}\DecValTok{1}\SpecialCharTok{{-}}\NormalTok{phi)}
+\CommentTok{\# {-}{-}{-} unobserved}
+\NormalTok{c         }\OtherTok{\textless{}{-}} \DecValTok{0}
+\NormalTok{gamma     }\OtherTok{\textless{}{-}} \FloatTok{0.9}
+\NormalTok{mu\_0      }\OtherTok{\textless{}{-}}\NormalTok{ c}\SpecialCharTok{/}\NormalTok{(}\DecValTok{1}\SpecialCharTok{{-}}\NormalTok{gamma)}
+\CommentTok{\# {-}{-}{-} other}
+\NormalTok{N         }\OtherTok{\textless{}{-}} \DecValTok{1000}
+\NormalTok{T         }\OtherTok{\textless{}{-}} \DecValTok{1000}
+
+\CommentTok{\# {-}{-}{-} initialize storage objects}
+\NormalTok{r  }\OtherTok{\textless{}{-}} \FunctionTok{matrix}\NormalTok{(}\DecValTok{0}\NormalTok{,T}\SpecialCharTok{+}\NormalTok{N,}\DecValTok{1}\NormalTok{)}
+\NormalTok{x  }\OtherTok{\textless{}{-}} \FunctionTok{matrix}\NormalTok{(}\DecValTok{0}\NormalTok{,T}\SpecialCharTok{+}\NormalTok{N,}\DecValTok{1}\NormalTok{)}
+\NormalTok{mu }\OtherTok{\textless{}{-}} \FunctionTok{matrix}\NormalTok{(}\DecValTok{0}\NormalTok{,T}\SpecialCharTok{+}\NormalTok{N,}\DecValTok{1}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Data Generation Process}\label{data-generation-process}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\ControlFlowTok{for}\NormalTok{ (t }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\NormalTok{(T}\SpecialCharTok{+}\NormalTok{N))\{}
+  
+  \ControlFlowTok{if}\NormalTok{ (t}\SpecialCharTok{==}\DecValTok{1}\NormalTok{)\{}
+\NormalTok{    r[t]  }\OtherTok{\textless{}{-}}\NormalTok{ beta}\SpecialCharTok{\%*\%}\NormalTok{x\_0 }\SpecialCharTok{+}\NormalTok{ mu\_0 }\SpecialCharTok{+} \FunctionTok{rnorm}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{0}\NormalTok{,}\FloatTok{0.2}\NormalTok{)}
+\NormalTok{    x[t]  }\OtherTok{\textless{}{-}}\NormalTok{ c }\SpecialCharTok{+}\NormalTok{ phi}\SpecialCharTok{\%*\%}\NormalTok{x\_0 }\SpecialCharTok{+} \FunctionTok{rnorm}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{0}\NormalTok{,}\FloatTok{0.2}\NormalTok{)}
+\NormalTok{    mu[t] }\OtherTok{\textless{}{-}}\NormalTok{ c }\SpecialCharTok{+}\NormalTok{ gamma}\SpecialCharTok{\%*\%}\NormalTok{mu\_0 }\SpecialCharTok{+} \FunctionTok{rnorm}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{0}\NormalTok{,}\FloatTok{0.2}\NormalTok{)}
+\NormalTok{  \} }
+  \ControlFlowTok{else}\NormalTok{\{}
+\NormalTok{    r[t]  }\OtherTok{\textless{}{-}}\NormalTok{ beta}\SpecialCharTok{\%*\%}\NormalTok{x[t}\DecValTok{{-}1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ mu[t}\DecValTok{{-}1}\NormalTok{] }\SpecialCharTok{+} \FunctionTok{rnorm}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{0}\NormalTok{,}\FloatTok{0.2}\NormalTok{)}
+\NormalTok{    x[t]  }\OtherTok{\textless{}{-}}\NormalTok{ c }\SpecialCharTok{+}\NormalTok{ phi}\SpecialCharTok{\%*\%}\NormalTok{x[t}\DecValTok{{-}1}\NormalTok{] }\SpecialCharTok{+} \FunctionTok{rnorm}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{0}\NormalTok{,}\FloatTok{0.2}\NormalTok{)}
+\NormalTok{    mu[t] }\OtherTok{\textless{}{-}}\NormalTok{ c }\SpecialCharTok{+}\NormalTok{ gamma}\SpecialCharTok{\%*\%}\NormalTok{mu[t}\DecValTok{{-}1}\NormalTok{] }\SpecialCharTok{+} \FunctionTok{rnorm}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{0}\NormalTok{,}\FloatTok{0.2}\NormalTok{) }
+\NormalTok{  \}}
+  
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Results}\label{results}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# {-}{-}{-} discard the burn{-}in period }
+\NormalTok{r  }\OtherTok{\textless{}{-}}\NormalTok{ r[(N}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{(T}\SpecialCharTok{+}\NormalTok{N)]}
+\NormalTok{x  }\OtherTok{\textless{}{-}}\NormalTok{ x[(N}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{(T}\SpecialCharTok{+}\NormalTok{N)]}
+\NormalTok{mu  }\OtherTok{\textless{}{-}}\NormalTok{ mu[(N}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{(T}\SpecialCharTok{+}\NormalTok{N)]}
+
+\CommentTok{\# {-}{-}{-} build a data frame with the plotting data }
+\NormalTok{df }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{time =} \DecValTok{1}\SpecialCharTok{:}\NormalTok{T, }\AttributeTok{mu =}\NormalTok{ mu)}
+
+\CommentTok{\# {-}{-}{-} plot the mu}
+\FunctionTok{ggplot}\NormalTok{(df, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ time, }\AttributeTok{y =}\NormalTok{ mu)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{color =} \StringTok{"blue"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{x =} \StringTok{"Time"}\NormalTok{,}
+    \AttributeTok{y =} \StringTok{"Predictor"}\NormalTok{,}
+    \AttributeTok{title =} \StringTok{"Simulated Latent Variable"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{axis.text  =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{),}
+    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{),}
+    \AttributeTok{axis.line  =} \FunctionTok{element\_line}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{),}
+    \AttributeTok{axis.ticks =} \FunctionTok{element\_line}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{),}
+    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{face =} \StringTok{"bold"}\NormalTok{)}
+\NormalTok{  )}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{tutorial_week7_files/figure-latex/unnamed-chunk-6-1.pdf}}
+
+\section{Exercise 2}\label{exercise-2}
+
+\subsection{Motivation}\label{motivation}
+
+Our primary objective is to estimate the latent process \(\mu_t\).
+However, \(\mu_t\)is not directly observed. It is a theoretical
+construct that drives the dynamics of returns, but it must be inferred
+from the observable data \(r_t\).
+
+To retrieve \(\mu_t\), we rely on the structure imposed by the state
+space model. The measurement equation links the observed variable
+\(r_t\) to the unobserved state \(\mu_t\), while the state equation
+governs the evolution of \(\mu_t\) over time. Because of this structural
+linkage, learning about the parameters that govern these equations
+allows us to learn about the latent state itself.
+
+The key idea is the following:\\
+if we can determine the parameter vector \(\theta\) that best explains
+the observed data, then we can use that parameter vector to reconstruct
+the path of \(\mu_t\).
+
+To determine this optimal parameter vector, we employ Maximum Likelihood
+Estimation (MLE). MLE selects the parameter vector \(\theta\) that
+maximizes the probability of observing the data \(r_1, \dots, r_T\)
+under the model.
+
+This leads to two intertwined problems:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  For a given parameter vector \(\theta\), compute the likelihood of the
+  observed data.
+\item
+  Search over possible parameter vectors to find the one that maximizes
+  this likelihood.
+\end{enumerate}
+
+The Kalman filter solves the first problem. The optimization routine
+solves the second.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsubsection{From the Model to the
+Likelihood}\label{from-the-model-to-the-likelihood}
+
+Given a parameter vector \(\theta\), the Kalman filter recursively
+constructs the conditional distribution
+
+\[
+r_t \mid D_{t-1} \sim \mathcal{N}(f_t(\theta), S_t(\theta)).
+\]
+
+At each point in time:
+
+\begin{itemize}
+\tightlist
+\item
+  The prediction step forms a prior belief about the latent state
+  \(\mu_t\).
+\item
+  The updating step refines that belief using the newly observed
+  \(r_t\).
+\end{itemize}
+
+Each period contributes a likelihood term:
+
+\[
+L_t(\theta) = f(r_t|D_{t-1},\theta)
+\]
+
+By the probability chain rule, the joint likelihood of the full sample
+is the product of these conditional densities:
+
+\[
+L(\theta) = \prod_{t=1}^T L_t(\theta) 
+\]
+
+and the total log-likelihood is obtained by summing the period
+contributions:
+
+\[
+\ell(r|\theta) = \log L(\theta) = \sum_{t=1}^T \ell_t(\theta).
+\]
+
+For a fixed \(\theta\), this log-likelihood is just a number. It
+acquires meaning only when compared to the values generated by
+alternative parameter vectors.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsubsection{The Role of Optimization}\label{the-role-of-optimization}
+
+The optimization routine repeatedly proposes new candidate parameter
+vectors \(\theta\). For each candidate:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  The Kalman filter is executed.
+\item
+  The full log-likelihood is computed.
+\item
+  The optimizer compares the resulting value to previous ones.
+\end{enumerate}
+
+Through this iterative process, the algorithm searches for the parameter
+vector that maximizes the likelihood (equivalently, minimizes the
+negative log-likelihood returned by the function).
+
+Once the optimal parameter vector \(\hat{\theta}\) is found, the
+corresponding filtered estimates
+
+\[
+\hat{\mu}_t = b_t
+\]
+
+provide our reconstruction of the unobserved state.
+
+Thus, the estimation of \(\mu_t\)is not done directly. It is obtained
+indirectly through:
+
+\begin{itemize}
+\tightlist
+\item
+  specifying a structural model,
+\item
+  estimating its parameters via likelihood maximization,
+\item
+  and applying the Kalman filter with the optimal parameters.
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsubsection{Conceptual Summary}\label{conceptual-summary}
+
+The workflow can therefore be summarized as:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi})}
+\tightlist
+\item
+  Specify the state space model.
+\item
+  Use the Kalman filter to evaluate the likelihood for a given
+  \(\theta\).
+\item
+  Use MLE to find the parameter vector that best explains the data.
+\item
+  Recover the latent state using the filtered estimates associated with
+  the optimal parameters.
+\end{enumerate}
+
+In this framework, the Kalman filter translates structural assumptions
+into predictive distributions, while MLE selects the parameterization
+that makes the observed data most probable.
+
+\subsection{1. State Space Model}\label{state-space-model}
+
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/general_state_space.png}
+
+Let's nest our setup into the general state space such that we may
+derive the Kalman filter.
+
+\[
+\begin{aligned}
+X_{t-1} &= 
+\begin{bmatrix}
+1 & x_{t-1}
+\end{bmatrix} 
+\\
+Z_{t-1} &= 1
+\\
+\Phi &= \gamma
+\\
+\beta &= 
+\begin{bmatrix}
+\alpha \\
+\beta
+\end{bmatrix}
+\end{aligned}
+\]
+
+\textbf{Measurement Equation}
+
+\[
+r_t = X_{t-1}\beta + \mu_{t-1} + \epsilon_t
+\] \textbf{State Equation}
+
+\[
+\mu_t = \Phi \mu_{t-1} + \eta_t
+\]
+
+\subsection{2. Kalman Filter}\label{kalman-filter}
+
+\textbf{Prediction Equations}
+
+\[
+\begin{aligned}
+\mathbb{E}(\mu_t|D_{t-1}) &: a_t = \Phi b_{t-1}\\
+\mathbb{Var}(\mu_t|D_{t-1}) &: P_t = \Phi^2 Q_{t-1} + \sigma_{\eta}^2 \\
+\mathbb{E}(r_t|D_{t-1}) &: f_t = X_{t-1}\beta + b_{t-1}\\
+\mathbb{Var}(r_t|D_{t-1}) &: S_t = Q_{t-1} + \sigma_{\epsilon}^2 \\
+\mathbb{Cov}(r_t,\mu_t|D_{t-1}) &: Gt = \Phi Q_{t-1}
+\end{aligned}
+\]
+
+\textbf{Updating Equations}
+
+\[
+\begin{aligned}
+\mathbb{E}(\mu_t|D_t) &: b_t = a_t + G_tS_t^{-1}(r_t-f_t)\\
+\mathbb{Var}(\mu_t|D_t) &: Q_t = P_t - G_t^2S_t^{-1}
+\end{aligned}
+\]
+
+\textbf{Log-Likelihood contribution at time} \(t\) \[
+\begin{aligned}
+\ell_t(\theta) &=
+\log L_t(\theta) \\
+&= \log \left( \frac{1}{\sqrt{2\pi S_t}}\exp\left[-\frac{(r_t-f_t)^2}{2S_t}\right] \right) 
+\\
+&=\underbrace{log(1)}_{=0} - log(\sqrt{2\pi S_t}) - \frac{(r_t - f_t)^2}{2S_t} 
+\\
+&= -\frac{1}{2}log(2\pi) -\frac{1}{2}log(S_t) -\frac{1}{2}\frac{(r_t-f_t)^2}{S_t}
+\end{aligned}
+\]
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{kalman\_like }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(theta)\{}
+  
+  \CommentTok{\# {-}{-}{-} extract the parameters to be estimated}
+\NormalTok{  alpha       }\OtherTok{\textless{}{-}}\NormalTok{ theta[}\DecValTok{1}\NormalTok{]}
+\NormalTok{  beta        }\OtherTok{\textless{}{-}}\NormalTok{ theta[}\DecValTok{2}\NormalTok{]}
+\NormalTok{  var\_epsilon }\OtherTok{\textless{}{-}}\NormalTok{ theta[}\DecValTok{3}\NormalTok{]}
+\NormalTok{  phi         }\OtherTok{\textless{}{-}}\NormalTok{ theta[}\DecValTok{4}\NormalTok{]}
+\NormalTok{  var\_eta     }\OtherTok{\textless{}{-}}\NormalTok{ theta[}\DecValTok{5}\NormalTok{]}
+  
+\NormalTok{  T }\OtherTok{\textless{}{-}} \FunctionTok{length}\NormalTok{(r)}
+  
+  \CommentTok{\# {-}{-}{-} initialize the estimates}
+\NormalTok{  b\_0 }\OtherTok{\textless{}{-}} \DecValTok{0} 
+\NormalTok{  Q\_0 }\OtherTok{\textless{}{-}}\NormalTok{ var\_eta}\SpecialCharTok{/}\NormalTok{(}\DecValTok{1}\SpecialCharTok{{-}}\NormalTok{phi}\SpecialCharTok{\^{}}\DecValTok{2}\NormalTok{)}
+  
+  \CommentTok{\# {-}{-}{-}{-} initialize storage objects }
+\NormalTok{  L }\OtherTok{\textless{}{-}} \FunctionTok{numeric}\NormalTok{(T)}
+\NormalTok{  a }\OtherTok{\textless{}{-}} \FunctionTok{numeric}\NormalTok{(T)}
+\NormalTok{  f }\OtherTok{\textless{}{-}} \FunctionTok{numeric}\NormalTok{(T)}
+\NormalTok{  b }\OtherTok{\textless{}{-}} \FunctionTok{numeric}\NormalTok{(T)}
+\NormalTok{  P }\OtherTok{\textless{}{-}} \FunctionTok{numeric}\NormalTok{(T)}
+\NormalTok{  S }\OtherTok{\textless{}{-}} \FunctionTok{numeric}\NormalTok{(T)}
+\NormalTok{  G }\OtherTok{\textless{}{-}} \FunctionTok{numeric}\NormalTok{(T)}
+\NormalTok{  Q }\OtherTok{\textless{}{-}} \FunctionTok{numeric}\NormalTok{(T)}
+  
+  \CommentTok{\# {-}{-}{-} initial values for the Kalman filter}
+\NormalTok{  b[}\DecValTok{1}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ b\_0}
+\NormalTok{  Q[}\DecValTok{1}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ Q\_0}
+  
+  \CommentTok{\# {-}{-}{-} Kalman Filter loop}
+  \ControlFlowTok{for}\NormalTok{ (t }\ControlFlowTok{in} \DecValTok{2}\SpecialCharTok{:}\NormalTok{T)\{}
+    
+    \CommentTok{\# {-}{-} prediction step}
+\NormalTok{    a[t] }\OtherTok{\textless{}{-}}\NormalTok{ phi}\SpecialCharTok{*}\NormalTok{b[t}\DecValTok{{-}1}\NormalTok{]}
+\NormalTok{    P[t] }\OtherTok{\textless{}{-}}\NormalTok{ (phi}\SpecialCharTok{\^{}}\DecValTok{2}\NormalTok{)}\SpecialCharTok{*}\NormalTok{Q[t}\DecValTok{{-}1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ var\_eta}
+\NormalTok{    f[t] }\OtherTok{\textless{}{-}}\NormalTok{ (alpha }\SpecialCharTok{+}\NormalTok{ x[t}\DecValTok{{-}1}\NormalTok{]}\SpecialCharTok{*}\NormalTok{beta) }\SpecialCharTok{+}\NormalTok{ b[t}\DecValTok{{-}1}\NormalTok{]}
+\NormalTok{    S[t] }\OtherTok{\textless{}{-}}\NormalTok{ Q[t}\DecValTok{{-}1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ var\_epsilon }
+\NormalTok{    G[t] }\OtherTok{\textless{}{-}}\NormalTok{ phi}\SpecialCharTok{*}\NormalTok{Q[t}\DecValTok{{-}1}\NormalTok{]}
+    
+    \CommentTok{\# {-}{-} constraint St to be strictly positive }
+\NormalTok{    S[t] }\OtherTok{\textless{}{-}} \FunctionTok{ifelse}\NormalTok{(S[t] }\SpecialCharTok{\textless{}=} \DecValTok{0}\NormalTok{, }\FunctionTok{max}\NormalTok{(S[t], }\FloatTok{1e{-}8}\NormalTok{), S[t])}
+    
+    \CommentTok{\# {-}{-} updating step}
+\NormalTok{    b[t] }\OtherTok{\textless{}{-}}\NormalTok{ a[t] }\SpecialCharTok{+}\NormalTok{ (G[t] }\SpecialCharTok{/}\NormalTok{ S[t]) }\SpecialCharTok{*}\NormalTok{ (r[t] }\SpecialCharTok{{-}}\NormalTok{ f[t])}
+\NormalTok{    Q[t] }\OtherTok{\textless{}{-}}\NormalTok{ P[t] }\SpecialCharTok{{-}}\NormalTok{ (G[t]}\SpecialCharTok{\^{}}\DecValTok{2} \SpecialCharTok{/}\NormalTok{ S[t])}
+    
+    \CommentTok{\# {-}{-} compute the conditional log{-}likelihood}
+\NormalTok{    L[t] }\OtherTok{\textless{}{-}} \SpecialCharTok{{-}}\FloatTok{0.5} \SpecialCharTok{*} \FunctionTok{log}\NormalTok{(}\DecValTok{2} \SpecialCharTok{*}\NormalTok{ pi) }\SpecialCharTok{{-}} \FloatTok{0.5} \SpecialCharTok{*} \FunctionTok{log}\NormalTok{(S[t]) }\SpecialCharTok{{-}} \FloatTok{0.5} \SpecialCharTok{*}\NormalTok{ ((r[t] }\SpecialCharTok{{-}}\NormalTok{ f[t])}\SpecialCharTok{\^{}}\DecValTok{2} \SpecialCharTok{/}\NormalTok{ S[t])}
+\NormalTok{  \}}
+  
+  \CommentTok{\# {-}{-}{-} store the estimate sglobally for further use}
+  \FunctionTok{assign}\NormalTok{(}\StringTok{"f\_final"}\NormalTok{, f, }\AttributeTok{envir =}\NormalTok{ .GlobalEnv)}
+  \FunctionTok{assign}\NormalTok{(}\StringTok{"S\_final"}\NormalTok{, S, }\AttributeTok{envir =}\NormalTok{ .GlobalEnv)}
+  \FunctionTok{assign}\NormalTok{(}\StringTok{"b\_final"}\NormalTok{, b, }\AttributeTok{envir =}\NormalTok{ .GlobalEnv)}
+  
+  \CommentTok{\# {-}{-}{-} return the negative log{-}likelihood for minimization}
+  \FunctionTok{return}\NormalTok{(}\SpecialCharTok{{-}}\FunctionTok{sum}\NormalTok{(L))}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{3. MLE}\label{mle}
+
+A brief and intuitive explanation on the mechanics of the Nelder-Mead
+algorithm:
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+The Nelder--Mead algorithm is a derivative-free optimization method that
+searches for the parameter vector that minimizes the negative
+log-likelihood without requiring knowledge of the analytical form of the
+likelihood surface. Starting from an initial parameter guess, the
+algorithm constructs a simplex --- a geometric object consisting of
+\(k+1\) points in a \(k\)-dimensional parameter space. Each point
+represents a candidate parameter vector, and for each candidate the
+likelihood function (via the Kalman filter) is evaluated. The algorithm
+then ranks these points from best to worst according to their objective
+function values. It iteratively replaces the worst-performing parameter
+vector by moving the simplex through reflection, expansion, contraction,
+or shrinkage steps, depending on whether improvement is achieved. At
+each step, the likelihood function is re-evaluated to determine whether
+the new candidate improves the objective. This process continues until
+successive movements no longer produce meaningful improvements and the
+simplex contracts around a local minimum. Importantly, the algorithm
+does not know the functional shape of the likelihood surface; it
+navigates the parameter space using only comparisons of likelihood
+values, effectively searching ``blindly'' until convergence is reached
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\href{https://alexdowad.github.io/visualizing-nelder-mead/}{Visualization
+of the Nelder-Mead algorithm}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# {-}{-}{-} initial guess for [alpha, beta, var\_epsilon, phi, var\_eta]}
+\NormalTok{initial\_theta }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{0}\NormalTok{, }\FloatTok{0.01}\NormalTok{, }\FloatTok{0.90}\NormalTok{, }\FloatTok{0.01}\NormalTok{)}
+
+\CommentTok{\# {-}{-}{-} solve the optimization problem}
+\NormalTok{opt\_result }\OtherTok{\textless{}{-}} \FunctionTok{optimx}\NormalTok{(}\AttributeTok{par =}\NormalTok{ initial\_theta, }\AttributeTok{fn =}\NormalTok{kalman\_like, }\AttributeTok{method =} \StringTok{"Nelder{-}Mead"}\NormalTok{)}
+
+\CommentTok{\# {-}{-}{-} extract the solution (i.e. the local maximum)}
+\NormalTok{alpha\_mle       }\OtherTok{\textless{}{-}}\NormalTok{ opt\_result}\SpecialCharTok{$}\NormalTok{p1 }
+\NormalTok{beta\_mle        }\OtherTok{\textless{}{-}}\NormalTok{ opt\_result}\SpecialCharTok{$}\NormalTok{p2}
+\NormalTok{var\_epsilon\_mle }\OtherTok{\textless{}{-}}\NormalTok{ opt\_result}\SpecialCharTok{$}\NormalTok{p3}
+\NormalTok{phi\_mle         }\OtherTok{\textless{}{-}}\NormalTok{ opt\_result}\SpecialCharTok{$}\NormalTok{p4}
+\NormalTok{var\_eta\_mle     }\OtherTok{\textless{}{-}}\NormalTok{ opt\_result}\SpecialCharTok{$}\NormalTok{p5}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{4. Results}\label{results-1}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# {-}{-}{-} build a data frame with the plotting data }
+\NormalTok{df }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{time =} \DecValTok{1}\SpecialCharTok{:}\NormalTok{T, }\AttributeTok{true =}\NormalTok{ mu, }\AttributeTok{estimated =}\NormalTok{ b\_final)}
+
+\CommentTok{\# {-}{-}{-} plot the mu}
+\FunctionTok{ggplot}\NormalTok{(df, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ time)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y =}\NormalTok{ true, }\AttributeTok{color =} \StringTok{"True unobserved"}\NormalTok{, }\AttributeTok{linetype =} \StringTok{"True unobserved"}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y =}\NormalTok{ estimated , }\AttributeTok{color =} \StringTok{"Estimated unobserved"}\NormalTok{, }\AttributeTok{linetype =} \StringTok{"Estimated unobserved"}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_color\_manual}\NormalTok{(}
+    \AttributeTok{values =} \FunctionTok{c}\NormalTok{(}
+      \StringTok{"True unobserved"}  \OtherTok{=} \StringTok{"blue"}\NormalTok{,}
+      \StringTok{"Estimated unobserved"} \OtherTok{=} \StringTok{"red"}
+\NormalTok{    ),}
+    \AttributeTok{guide =} \FunctionTok{guide\_legend}\NormalTok{(}\AttributeTok{title =} \ConstantTok{NULL}\NormalTok{)}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{scale\_linetype\_manual}\NormalTok{(}
+    \AttributeTok{values =} \FunctionTok{c}\NormalTok{(}
+      \StringTok{"True unobserved"}  \OtherTok{=} \StringTok{"solid"}\NormalTok{,}
+      \StringTok{"Estimated unobserved"} \OtherTok{=} \StringTok{"dashed"}
+\NormalTok{    ),}
+    \AttributeTok{guide =} \FunctionTok{guide\_legend}\NormalTok{(}\AttributeTok{title =} \ConstantTok{NULL}\NormalTok{)}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{x =} \StringTok{"Time"}\NormalTok{,}
+    \AttributeTok{y =} \StringTok{"Predictor"}\NormalTok{,}
+    \AttributeTok{title =} \ConstantTok{NULL}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{axis.text  =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{),}
+    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{),}
+    \AttributeTok{axis.line  =} \FunctionTok{element\_line}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{),}
+    \AttributeTok{axis.ticks =} \FunctionTok{element\_line}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{),}
+    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{legend.position =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.30}\NormalTok{, }\FloatTok{0.85}\NormalTok{),}
+    \AttributeTok{legend.justification =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{),}
+    \AttributeTok{legend.background =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{fill =} \StringTok{"white"}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{)}
+\NormalTok{  )}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{tutorial_week7_files/figure-latex/unnamed-chunk-9-1.pdf}}
+
+\section{Appendix}\label{appendix}
+
+\subsection{Derivation of the Kalman
+Filter}\label{derivation-of-the-kalman-filter}
+
+This derivation follows the set-up of exercise 2.
+
+\textbf{Initial condition}
+
+At time \(t-1\) all we know is that we have imposed the latent variable
+to follow an \(AR(1)\) process and from the fact that the error term is
+Gaussian we can infere that
+
+\[
+\mu_{t-1} | D_{t-1} \sim \mathcal{N}(b_{t-1},Q_{t-1})
+\] where \(D_t = \{r_t, D_t-1\}\) is the information set available at
+time t.
+
+Given we have imposed \(\mu_{t-1}\) to follow an \(AR(1)\), then to
+start off the process we can set \(b_{1}\) and \(Q_{1}\) to the mean and
+variance of the process, respectively. Following the \(AR(1)\)
+properties we have that
+
+\[
+\begin{aligned}
+b_{1} &= \mathbb{E}(\mu_{t}) = 0 
+\\
+Q_{1} &= \mathbb{Var}(\mu_{t}) = \frac{\sigma_{\eta}^2}{1-\Phi^2}
+\end{aligned}
+\]
+
+\textbf{Prior}
+
+At time \(t\) we can write the moments of our latent variable with the
+information we have available up until time \(t-1\).
+
+\[
+\begin{aligned}
+\mathbb{E}(\mu_{t} | D_{t-1}) &= \mathbb{E}(\Phi \mu_{t-1} + \eta_t | D_{t-1}) 
+\\
+&= \Phi \mathbb{E}(\mu_{t-1}|D_{t-1}) + \mathbb{E}(\eta_t) &&\quad (\eta_t \text{ is independent of } D_{t-1} \text{, meaning that } \mathbb{E}(\eta_t|D_t-1) = \mathbb{E}(\eta_t))
+\\
+&= \underbrace{\Phi b_{t-1}}_{a_t} &&\quad (u_t \sim \mathcal{N}(0,\sigma_u^2) \Rightarrow \mathbb{E}(u_t) = 0)
+\\
+\mathbb{Var}(\mu_{t} | D_{t-1}) &= \mathbb{Var}(\Phi \mu_{t-1} + \eta_t | D_{t-1})
+\\
+&= \mathbb{Var}(\Phi \mu_{t-1}|D_{t-1}) +\mathbb{Var}(\eta_t|D_{t-1}) + 2\mathbb{Cov}(\mu_{t-1},\eta_t|D_{t-1})
+\\
+&= \Phi \mathbb{Var}(\mu_{t-1}|D_{t-1})\Phi' + \sigma_{\eta}^2 &&\quad (\mathbb{Cov}(\mu_{t-1},\eta_t|D_{t-1}) = 0)
+\\
+&= \underbrace{\Phi^2 Q_{t-1} + \sigma_{\eta}^2}_{P_t} &&\quad (\Phi \text{ is a 1x1 by vector})
+\end{aligned}
+\]
+
+With the moments defined we can characterize the distribution of our
+latent variable conditioned on the available information
+
+\[
+\mu_t | D_{t-1} \sim \mathcal{N}(a_t, P_t)
+\]
+
+\textbf{Prediction}
+
+At time \(t\)
+
+\[
+\begin{aligned}
+\mathbb{E}(r_t|D_{t-1}) &= \mathbb{E}(X_{t-1}\beta + \mu_{t-1} + \epsilon_t|D_{t-1}) 
+\\
+&= \mathbb{E}(X_{t-1}|D_{t-1})\beta + \mathbb{E}(\mu_{t-1}|D_{t-1}) &&\quad (\epsilon_t \sim \mathcal{N}(0,\sigma_{\epsilon}^2) \Rightarrow \mathbb{E}(\epsilon_t) = 0) 
+\\
+&= \underbrace{X_{t-1}\beta + b_{t-1}}_{f_t} &&\quad (X_{t-1} \text{ is independent of } D_{t-1} \text{ thus we can remove the expectation operator})
+\\
+\mathbb{Var} (r_t|D_{t-1}) &= \mathbb{Var}(X_{t-1}\beta + \mu_{t-1} + \epsilon_t |D_{t-1})
+\\
+&= \underbrace{\mathbb{Var}(X_{t-1}\beta|D_{t-1})}_{=0} + \mathbb{Var}(\mu_{t-1}|D_{t-1}) + \mathbb{Var}(\epsilon_t|D_{t-1}) 
+\\
+&+ 2\underbrace{\mathbb{Cov}(X_{t-1}\beta,\mu_{t-1}|D_{t-1})}_{=0} + 2\underbrace{\mathbb{Cov}(X_{t-1}\beta,\epsilon_t|D_{t-1})}_{=0} + 2\underbrace{\mathbb{Cov}(\mu_{t-1},\epsilon_t|D_{t-1})}_{=0}
+\\ 
+&= \underbrace{Q_{t-1} + \sigma_{\epsilon}^2}_{S_t}
+\\
+\end{aligned}
+\]
+
+With the moments defined we can characterize the distribution of the
+preidiction conditioned on the available information
+
+\[
+r_t | D_{t-1} \sim \mathcal{N}(f_t, S_t)
+\]
+
+\textbf{Joint Distribution}
+
+\[
+\begin{aligned}
+\mathbb{Cov}(r_t,\mu_t|D_{t-1})
+&= \mathbb{E}[(r_t - \mathbb{E}(r_t|D_{t-1}))(\mu_t - E(\mu_t|D_{t-1}))|D_{t-1}] \\
+&= \mathbb{E}[(X_{t-1}\beta + \mu_{t-1} + \epsilon_t - X_{t-1}\beta - b_{t-1})(\Phi\mu_{t-1} + u_t - a_t)|D_{t-1}] \\
+&= \mathbb{E}[(\mu_{t-1} + \epsilon_t - b_{t-1})(\Phi\mu_{t-1} + u_t - a_t)|D_{t-1}] \\
+&= \mathbb{E}[\mu_{t-1}\Phi\mu_{t-1} + \mu_{t-1}u_t - \mu_{t-1}a_t \\
+&+ \epsilon_t\Phi\mu_{t-1} + \epsilon_t u_t - \epsilon_t a_t \\
+&-b_{t-1}\Phi\mu_{t-1} - b_{t-1}u_t + b_{t-1}a_t|D_{t-1}]\\
+&= \mathbb{E}[\mu_{t-1}\Phi\mu_{t-1} - \mu_{t-1}a_t - b_{t-1}\Phi\mu_{t-1} + b_{t-1}a_t|D_{t-1}] \\
+&= \mathbb{E}[\mu_{t-1}\Phi\mu_{t-1} - \mu_{t-1}\Phi b_{t-1} - b_{t-1}\Phi\mu_{t-1} + b_{t-1}\Phi b_{t-1}|D_{t-1}]\\
+&= \mathbb{E}[\Phi\mu_{t-1}^2 - 2\Phi\mu_{t-1}b_{t-1} + \Phi b_{t-1}^2|D_{t-1}]\\
+&= \Phi\mathbb{E}[(\mu_{t-1} - \mathbb{E}(\mu_{t-1}|D_{t-1}))|D_{t-1}] \\
+&= \Phi\mathbb{Var}(\mu_{t-1}|D_{t-1}) \\
+&= \underbrace{\Phi Q_{t-1}}_{G_t}
+\end{aligned}
+\]
+
+\[
+\begin{pmatrix}
+r_t \\
+\mu_t
+\end{pmatrix}
+\mid D_{t-1} 
+\sim
+\mathcal{N}
+\begin{pmatrix}
+\begin{bmatrix}
+f_t\\
+a_t
+\end{bmatrix}
+,
+\begin{bmatrix}
+S_t & G_t\\
+G_t & P_t
+\end{bmatrix}
+\end{pmatrix}
+\]
+
+\textbf{Posterior}
+
+Once we have observed \(r_t\) at time \(t\) we can update our
+information set.
+
+With this, we can use the joint distribution to characterize the
+distribution of the latent variable conditioned on the newly updated
+information set. Thereby obtaining the posterior distribution at time
+\(t\).
+
+Formalizing this statement we can derive the moments
+
+\[
+\begin{aligned}
+\mathbb{E}(\mu_t|D_t) &= \mathbb{E}(\mu_t|r_t, D_{t-1}) \\
+&= \underbrace{\mathbb{E}(\mu_t|D_{t-1})}_{m_2} + \underbrace{\mathbb{Cov}(\mu_t,r_t|D_{t-1})}_{V_{21}}\underbrace{\mathbb{Var}(r_t|D_{t-1})^{-1}}_{V_{11}^{-1}}(\underbrace{r_t}_{X_1}-\underbrace{\mathbb{E}(r_t|D_{t-1}}_{m_1})) \\
+&= \underbrace{a_t + G_tS_t^{-1}(r_t-f_t)}_{b_t}
+\\
+\mathbb{Var}(\mu_t|D_t) &= \mathbb{Var}(\mu_t|r_t,D_{t-1}) \\
+&= \underbrace{\mathbb{Var}(u_t|D_{t-1})}_{V_{22}} - \underbrace{\mathbb{Cov}(\mu_t,r_t|D_{t-1})}_{V_{21}}\underbrace{\mathbb{Var}(r_t|D_{t-1})^{-1}}_{V_{11}^{-1}}\underbrace{\mathbb{Cov}(r_t,\mu_t|D_{t-1})}_{V_{12}}\\
+&= \underbrace{P_t - G_t^2S_t^{-1}}_{Q_t}
+\end{aligned}
+\]
+
+and write the updated distribution of the latent variable
+
+\[
+\mu_t | D_t \sim \mathcal{N}(b_t,Q_t)
+\]
+
+\textbf{Summary}
+
+We can condense all the equations into two blocks the: (i) predictive
+equations - characterize the distribution of the latent variable and of
+the regressand at time \(t\) using all the available information until
+then (i.e.~time \(t-1\)); (ii) updating equations - characterize the
+distribution of the latent variable at time \(t\) once the regressand at
+time \(t\) has been observed
+
+\begin{enumerate}
+\def\labelenumi{(\roman{enumi})}
+\tightlist
+\item
+  prediction equations
+\end{enumerate}
+
+\[
+\begin{aligned}
+\mathbb{E}(\mu_t|D_{t-1}) &: a_t = \Phi b_{t-1}\\
+\mathbb{Var}(\mu_t|D_{t-1}) &: P_t = \Phi^2 Q_{t-1} + \sigma_{\eta}^2 \\
+\mathbb{E}(r_t|D_{t-1}) &: f_t = X_{t-1}\beta + b_{t-1}\\
+\mathbb{Var}(r_t|D_{t-1}) &: S_t = Q_{t-1} + \sigma_{\epsilon}^2 \\
+\mathbb{Cov}(r_t,\mu_t|D_{t-1}) &: Gt = \Phi Q_{t-1}
+\end{aligned}
+\]
+
+\begin{enumerate}
+\def\labelenumi{(\roman{enumi})}
+\setcounter{enumi}{1}
+\tightlist
+\item
+  updating equations
+\end{enumerate}
+
+\[
+\begin{aligned}
+\mathbb{E}(\mu_t|D_t) &: b_t = a_t + G_tS_t^{-1}(r_t-f_t)\\
+\mathbb{Var}(\mu_t|D_t) &: Q_t = P_t - G_t^2S_t^{-1}
+\end{aligned}
+\]
+
+\textbf{Log-Likelihood}
+
+The Kalman filter reconstructs the latent state \(\mu_t\) by exploiting
+the structural linkage imposed by the state space model. Given a
+parameter vector \(\theta\), the filter recursively computes the
+conditional distribution of \(\mu_t\) using both the state equation and
+the measurement equation.
+
+Because the parameters govern the dynamics of the latent state and the
+magnitude of measurement noise, they determine the predictive moments of
+both \(\mu_t\) and \(r_t\). In turn, these predictive moments define the
+conditional distribution of the observable variable \(r_t\)
+
+Remember that \(r_t|D_{t-1} \sim \mathcal{N}(f_t,S_t)\), which means
+that we can write the density of \(r_t|D_{t-1}\) as
+
+\[
+f(r_t|D_{t-1},\theta_t) = \frac{1}{\sqrt{2\pi S_t}}\exp\left[-\frac{(r_t-f_t)^2}{2S_t}\right] 
+\] with
+\(\theta_t \equiv (\alpha, \beta, \sigma_{\epsilon}^2, \phi, \sigma_{\eta}^2)\),
+which characterizes both \(f_t and S_t\)
+
+If we evaluate this density at the realized \(r_t\), we are basically
+answering the question of how plausible was this observation under the
+model. Or, in other words, it is the likelihood contribution at time
+\(t\).
+
+\[
+L_t(\theta) = f(r_t|D_{t-1},\theta_t)
+\]
+
+To this, we can apply a monotonic transformation by using the logarithm,
+which will keep the location of the maximum and get rid of the
+exponential function. Doing so, we obtain the log-likelihood
+contribution at time \(t\)
+
+\[
+\begin{aligned}
+\ell_t(\theta) &=
+\log L_t(\theta) \\
+&= \log \left( \frac{1}{\sqrt{2\pi S_t}}\exp\left[-\frac{(r_t-f_t)^2}{2S_t}\right] \right) 
+\\
+&=\underbrace{log(1)}_{=0} - log(\sqrt{2\pi S_t}) - \frac{(r_t - f_t)^2}{2S_t} 
+\\
+&= -\frac{1}{2}log(2\pi) -\frac{1}{2}log(S_t) -\frac{1}{2}\frac{(r_t-f_t)^2}{S_t}
+\end{aligned}
+\]
+
+Once the Kalman Filter has gone through the whole sample, we can simply
+sum all the log-likelihood contributions to obtain the total likelihood
+of observing the data.
+
+Formalizing this statement, let \(r = (r_1, \dots, r_T)\), then density
+of \(r\) is as follows, by following the chain rule
+
+\[
+f(r|\theta) = f(r_1|\theta)\prod_{t=2}^T f(r_t|D_{t-1},\theta)
+\] Note that The likelihood is evaluated conditionally on the initial
+state. Because the recursive prediction begins at \(t=2\), the first
+observation is treated as part of the initialization and does not
+contribute to the likelihood.
+
+By the same reasoning as before, we have that
+
+\[
+L(\theta) = f(r|\theta)
+\] Applying the logarithm
+
+\$\$
+
+\begin{aligned}
+\ell(\theta) &= \log L(\theta)
+\\ 
+&= \log \left(\prod_{t=2}^T f(r_t|D_{t-1},\theta) \right)
+\\
+&= \sum_{t=2}^T \underbrace{\log f(r_t|D_{t-1}\theta)}_{\ell_t(\theta)}
+
+\end{aligned}
+
+\$\$
+
+\end{document}
